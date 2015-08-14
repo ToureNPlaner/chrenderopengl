@@ -8,8 +8,9 @@
 #include <string>
 #include <algorithm>
 #include <iostream>
-#include<iomanip>
+#include <iomanip>
 #include <memory>
+#include "tpclient.h"
 
 typedef unsigned int uint;
 
@@ -1399,6 +1400,9 @@ int main(int argc, char*argv[])
 	/////////////////////////////////////
 	// overly simple command line parsing
 	/////////////////////////////////////
+  
+  // Just a stupid test
+  useless_request();
 
 	std::string filepath;
 
