@@ -22,6 +22,8 @@ class TPClient {
   int useless_request();
 
  private:
+  // TODO add error handling
+  std::string post(const std::string& resource, const std::string& body);
   std::string base_url;
   CURL* curl;
 };
