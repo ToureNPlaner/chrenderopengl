@@ -10,7 +10,9 @@
 #include <iostream>
 #include <iomanip>
 #include <memory>
-#include "tpclient.h"
+#include "types.h"
+#include "graph_basics.h"
+#include "tp_client.h"
 
 typedef unsigned int uint;
 
@@ -143,30 +145,6 @@ Vec3 normalize(const Vec3& v) {
 }
 }
 
-/**
- * Node struct for parsing preprocessed osm graph from file
- */
-struct Node {
-  Node() : lat(0), lon(0) {}
-  Node(double la, double lo) : lat(la), lon(lo) {}
-
-  double lat;
-  double lon;
-};
-
-/**
- * Edge struct for parsing preprocessed osm graph from file
- */
-struct Edge {
-  Edge() : source(0), target(0), width(0), color(0) {}
-  Edge(uint s, uint t, uint w, uint c)
-      : source(s), target(t), width(w), color(c) {}
-
-  uint source;
-  uint target;
-  uint width;
-  int color;
-};
 
 /*
  * Each vertex contains the geo coordinates of a node and the color properties
@@ -183,16 +161,6 @@ struct Vertex {
   float color;
 };
 
-/*
- *
- */
-struct GeoBoundingBox {
-  float min_longitude;
-  float min_latitude;
-
-  float max_longitude;
-  float max_latitude;
-};
 
 /**
  * Function to simply read the string of a shader source file from disk
@@ -608,8 +576,8 @@ struct OrbitalCamera {
     view_matrix = rotation_matrix * translation_matrix;
   }
 
-  GeoBoundingBox computeVisibleArea() {
-    GeoBoundingBox bbox;
+  BoundingBox computeVisibleArea() {
+    BoundingBox bbox;
 
     // computer euklid. position of camera
     float lat_sin = sin((PI / 180.0f) * latitude);
@@ -1371,7 +1339,8 @@ int main(int argc, char* argv[]) {
   /////////////////////////////////////
 
   // Just a stupid test
-  useless_request();
+  TPClient tpclient("http://tourenplaner.informatik.uni-stuttgart.de");
+  tpclient.useless_request();
 
   std::string filepath;
 
@@ -1552,7 +1521,7 @@ int main(int argc, char* argv[]) {
 
       // labels.draw(camera);
 
-      GeoBoundingBox bbox = camera.computeVisibleArea();
+      BoundingBox bbox = camera.computeVisibleArea();
       // std::cout << std::fixed;
       // std::cout << std::setprecision(20);
       // std::cout<<"min latitude: "<<bbox.min_latitude<<" max latitude:

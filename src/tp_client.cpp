@@ -3,7 +3,7 @@
 #include <string>
 #include <cstdint>
 #include <vector>
-#include <curl/curl.h>
+#include "tp_client.h"
 #include "rapidjson/rapidjson.h"
 #include "rapidjson/document.h"
 
@@ -17,15 +17,12 @@ static size_t WriteCallback(void* contents, size_t size, size_t nmemb,
 
 using namespace rapidjson;
 
-int useless_request() {
-  CURL* curl;
+int TPClient::useless_request() {
   CURLcode res;
   bytebuf read_buffer;
 
-  curl = curl_easy_init();
   if (curl) {
-    curl_easy_setopt(curl, CURLOPT_URL,
-                     "http://tourenplaner.informatik.uni-stuttgart.de/info");
+    curl_easy_setopt(curl, CURLOPT_URL, (base_url + "/info").c_str());
     curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, WriteCallback);
     curl_easy_setopt(curl, CURLOPT_WRITEDATA, &read_buffer);
     res = curl_easy_perform(curl);
@@ -43,7 +40,6 @@ int useless_request() {
         std::cout << "Name: " << name.GetString() << std::endl;
       }
     }
-    curl_easy_cleanup(curl);
   }
   return 0;
 }

@@ -1,1 +1,0 @@
-void useless_request();
