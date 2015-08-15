@@ -1,4 +1,6 @@
 #pragma once
+#include <utility>
+#include <vector>
 
 /**
  * Node struct for parsing preprocessed osm graph from file
@@ -23,6 +25,19 @@ struct Edge {
   uint target;
   uint width;
   int color;
+};
+
+/**
+ * Holds graph data for drawing
+ */
+struct Draw {
+  Draw(){}
+  Draw(const std::vector<Node>& nodes_in,const std::vector<Edge>& edges_in):nodes(nodes_in),edges(edges_in){}
+  Draw(std::vector<Node>&& nodes_in,std::vector<Edge>&& edges_in):nodes(std::move(nodes_in)),edges(std::move(edges_in)){
+    std::cerr << "Move constructed Draw" << std::endl;
+  }
+  std::vector<Node> nodes;
+  std::vector<Edge> edges;
 };
 
 

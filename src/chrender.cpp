@@ -1339,30 +1339,31 @@ int main(int argc, char* argv[]) {
   /////////////////////////////////////
 
   // Just a stupid test
-  TPClient tpclient("http://localhost:8080");
-  tpclient.request_core(10, 40, 400, 0.01);
 
-  std::string filepath;
+  std::string server_url;
 
   int i = 1;
   if (argc < 3) {
-    std::cout << "Supply a graph with -gf <graph.gl>" << std::endl;
+    std::cout << "Supply a server  with -s <url>" << std::endl;
     return 0;
   }
   while (i < argc) {
-    if (argv[i] == (std::string) "-gf") {
+    if (argv[i] == (std::string) "-s") {
       i++;
       if (i < argc) {
-        filepath = argv[i];
+        server_url = argv[i];
         i++;
       } else {
-        std::cout << "Missing parameter for -gf" << std::endl;
+        std::cout << "Missing parameter for -s" << std::endl;
         return 0;
       }
     } else {
       i++;
     }
   }
+
+  TPClient tpclient(server_url);
+  Core core(tpclient.request_core(1000, 5, 400, 0.01));
 
   /////////////////////////////////////
   // Window and OpenGL Context creation
@@ -1415,7 +1416,6 @@ int main(int argc, char* argv[]) {
   std::vector<Node> nodes;
   std::vector<Edge> edges;
 
-  Parser::parseTxtGraphFile(filepath, nodes, edges);
 
   /////////////////////////////////////////////////////////////////////
   // Creation of graphics resources, i.e. shader programs, meshes, etc.
@@ -1442,7 +1442,7 @@ int main(int argc, char* argv[]) {
 
     /* Create renderable graph (mesh) */
     Graph lineGraph;
-    lineGraph.addSubgraph(nodes, edges);
+    lineGraph.addSubgraph(core.draw.nodes, core.draw.edges);
 
     /* Create a orbital camera */
     OrbitalCamera camera;

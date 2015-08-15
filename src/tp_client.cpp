@@ -67,7 +67,7 @@ json TPClient::post(const std::string& resource, const json& body) {
 }
 
 
-void TPClient::request_core(uint node_count, int min_length, int max_length, double max_ratio) {
+Core TPClient::request_core(uint node_count, int min_length, int max_length, double max_ratio) {
   json body = {
     {"nodeCount", node_count},
     {"minLen", min_length},
@@ -76,7 +76,24 @@ void TPClient::request_core(uint node_count, int min_length, int max_length, dou
     {"coords", "latlon"}
   };
   json res = post("/algdrawcore", body);
-  std::cerr << res.dump(4) << std::endl;
-  return;
+  Draw draw;
+  auto vertices = res["draw"]["vertices"];
+  const double divider = 10000000;
+  for(auto it = vertices.begin(); it != vertices.end();){
+    double lat = (double) *it++/divider;
+    double lon = (double) *it++/divider;
+    draw.nodes.emplace_back(Node(lat, lon));
+  }
+
+  auto draw_edges = res["draw"]["edges"];
+  for(auto it = draw_edges.begin(); it != draw_edges.end();){
+    uint src = *it++;
+    uint trgt = *it++;
+    uint weight = *it++;
+    draw.edges.emplace_back(Edge(src, trgt, weight/10, 1));
+  }
+
+
+  return Core(std::move(draw));
 }
 

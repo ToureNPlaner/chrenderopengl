@@ -2,7 +2,7 @@
 #include <curl/curl.h>
 #include <string>
 #include "types.h"
-#include "graph_basics.h"
+#include "core.h"
 #include "json.h"
 
 using json = nlohmann::json;
@@ -18,7 +18,7 @@ class TPClient {
       curl_easy_cleanup(curl);
     }
   }
-  void request_core(uint node_count, int min_length, int max_length,
+  Core request_core(uint node_count, int min_length, int max_length,
                     double max_ratio);
   void request_bundle(BoundingBox& bbox, uint core_size, int min_prio,
                       int min_length, int max_length, double max_ratio);
