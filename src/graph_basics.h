@@ -31,16 +31,16 @@ struct Edge {
  * Holds graph data for drawing
  */
 struct Draw {
-  Draw(){}
-  Draw(const std::vector<Node>& nodes_in,const std::vector<Edge>& edges_in):nodes(nodes_in),edges(edges_in){
+  Draw() {}
+  Draw(const std::vector<Node>& nodes_in, const std::vector<Edge>& edges_in)
+      : nodes(nodes_in), edges(edges_in) {
     std::cerr << "Draw Copy Constructor called" << std::endl;
   }
-  Draw(std::vector<Node>&& nodes_in,std::vector<Edge>&& edges_in):nodes(std::move(nodes_in)),edges(std::move(edges_in)){
-  }
+  Draw(std::vector<Node>&& nodes_in, std::vector<Edge>&& edges_in)
+      : nodes(std::move(nodes_in)), edges(std::move(edges_in)) {}
   std::vector<Node> nodes;
   std::vector<Edge> edges;
 };
-
 
 /**
  * A BoundingBox defined in geographical coordinates

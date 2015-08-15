@@ -146,7 +146,6 @@ Vec3 normalize(const Vec3& v) {
 }
 }
 
-
 /*
  * Each vertex contains the geo coordinates of a node and the color properties
  * of adjacent edges.
@@ -161,7 +160,6 @@ struct Vertex {
   float latitude;
   float color;
 };
-
 
 /**
  * Function to simply read the string of a shader source file from disk
@@ -1333,7 +1331,6 @@ bool parseTxtGraphFile(std::string graphfile, std::vector<Node>& n,
   return false;
 }
 }
-  
 
 using namespace std::placeholders;
 
@@ -1367,7 +1364,9 @@ int main(int argc, char* argv[]) {
   }
 
   TPClient tpclient(server_url);
-  auto request_core = [&tpclient]()->Core{return tpclient.request_core(1000, 5, 400, 0.01);};
+  auto request_core = [&tpclient]() -> Core {
+    return tpclient.request_core(1000, 5, 400, 0.01);
+  };
   std::future<Core> core_future = std::async(std::launch::async, request_core);
 
   /////////////////////////////////////
@@ -1420,7 +1419,6 @@ int main(int argc, char* argv[]) {
 
   std::vector<Node> nodes;
   std::vector<Edge> edges;
-
 
   /////////////////////////////////////////////////////////////////////
   // Creation of graphics resources, i.e. shader programs, meshes, etc.

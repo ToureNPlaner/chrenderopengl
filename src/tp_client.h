@@ -9,14 +9,18 @@ using json = nlohmann::json;
 
 class TPClient {
  public:
-  TPClient(std::string& base_url)
-      : base_url(base_url), curl(curl_easy_init()) {}
-  TPClient(std::string&& base_url)
-      : base_url(std::move(base_url)), curl(curl_easy_init()) {}
+  TPClient(std::string& base_url) : base_url(base_url), json_header(nullptr) {
+    // This is NOT THREAD SAFE so create TPClient at the start of main
+    curl_global_init(CURL_GLOBAL_ALL);
+    curl = curl_easy_init();
+    json_header = curl_slist_append(json_header, "Accept: application/json");
+  }
   ~TPClient() {
     if (curl) {
+      curl_slist_free_all(json_header);
       curl_easy_cleanup(curl);
     }
+    curl_global_cleanup();
   }
   Core request_core(uint node_count, int min_length, int max_length,
                     double max_ratio);
@@ -28,4 +32,5 @@ class TPClient {
   json post(const std::string& resource, const json& body);
   std::string base_url;
   CURL* curl;
+  curl_slist* json_header;
 };
