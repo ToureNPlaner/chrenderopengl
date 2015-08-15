@@ -3,6 +3,9 @@
 #include <string>
 #include "types.h"
 #include "graph_basics.h"
+#include "json.h"
+
+using json = nlohmann::json;
 
 class TPClient {
  public:
@@ -19,11 +22,10 @@ class TPClient {
                     double max_ratio);
   void request_bundle(BoundingBox& bbox, uint core_size, int min_prio,
                       int min_length, int max_length, double max_ratio);
-  int useless_request();
 
  private:
   // TODO add error handling
-  std::string post(const std::string& resource, const std::string& body);
+  json post(const std::string& resource, const json& body);
   std::string base_url;
   CURL* curl;
 };

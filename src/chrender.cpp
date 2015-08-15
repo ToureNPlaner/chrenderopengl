@@ -1340,7 +1340,7 @@ int main(int argc, char* argv[]) {
 
   // Just a stupid test
   TPClient tpclient("http://localhost:8080");
-  tpclient.request_core(1000, 40, 400, 0.01);
+  tpclient.request_core(10, 40, 400, 0.01);
 
   std::string filepath;
 

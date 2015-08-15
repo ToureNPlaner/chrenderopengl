@@ -4,10 +4,9 @@
 #include <cstdint>
 #include <vector>
 #include <algorithm>
+#include <utility>
 #include <cstring>
 #include "tp_client.h"
-#include "rapidjson/rapidjson.h"
-#include "rapidjson/document.h"
 
 
 static size_t string_write_callback(void* contents, size_t size, size_t nmemb,
@@ -17,8 +16,9 @@ static size_t string_write_callback(void* contents, size_t size, size_t nmemb,
 }
 
 struct string_read_helper {
+  string_read_helper(std::string&& in):s(std::move(in)),pos(0){}
   string_read_helper(const std::string& in):s(in), pos(0){}
-  const std::string& s;
+  const std::string s;
   size_t pos;
 };
 
@@ -37,7 +37,7 @@ static size_t string_read_callback(void* ptr, size_t size, size_t nmemb, void* u
   return send_bytes;
 }
 
-std::string TPClient::post(const std::string& resource, const std::string& body) {
+json TPClient::post(const std::string& resource, const json& body) {
   CURLcode res;
   std::string read_buffer;
   if (curl) {
@@ -47,8 +47,7 @@ std::string TPClient::post(const std::string& resource, const std::string& body)
     struct curl_slist* list = nullptr;
     list = curl_slist_append(list, "Accept: application/json");
     curl_easy_setopt(curl, CURLOPT_HTTPHEADER, list);
-
-    string_read_helper srh(body);
+    string_read_helper srh(body.dump());
     curl_easy_setopt(curl, CURLOPT_READFUNCTION, string_read_callback);
     curl_easy_setopt(curl, CURLOPT_READDATA, &srh);
     curl_easy_setopt(curl, CURLOPT_POSTFIELDSIZE, srh.s.size());
@@ -63,42 +62,21 @@ std::string TPClient::post(const std::string& resource, const std::string& body)
     }
 
   }
-  // No copy here since RVO or move holds
-  return read_buffer;
+  // No copy here since RVO or move
+  return json::parse(std::move(read_buffer));
 }
 
-using namespace rapidjson;
 
 void TPClient::request_core(uint node_count, int min_length, int max_length, double max_ratio) {
-  std::string body("{\"nodeCount\": 10,\"minLen\": 40,\"maxLen\": 400,\"maxRatio\": 0.01, \"coords\" : \"latlon\"}");
-  std::string res = post("/algdrawcore", body);
-  std::cerr << res << std::endl;
+  json body = {
+    {"nodeCount", node_count},
+    {"minLen", min_length},
+    {"maxLen", max_length},
+    {"maxRatio", max_ratio},
+    {"coords", "latlon"}
+  };
+  json res = post("/algdrawcore", body);
+  std::cerr << res.dump(4) << std::endl;
   return;
 }
 
-int TPClient::useless_request() {
-  CURLcode res;
-  std::string read_buffer;
-
-  if (curl) {
-    curl_easy_setopt(curl, CURLOPT_URL, (base_url + "/info").c_str());
-    curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, string_write_callback);
-    curl_easy_setopt(curl, CURLOPT_WRITEDATA, &read_buffer);
-    res = curl_easy_perform(curl);
-    if (res != CURLE_OK) {
-      std::cerr << "Curl request failed: " << curl_easy_strerror(res)
-                << std::endl;
-      return 1;
-    }
-
-    Document d;
-    if (!d.Parse(read_buffer.c_str()).HasParseError()) {
-      Value& algorithms = d["algorithms"];
-      for (SizeType i = 0; i < algorithms.Size(); ++i) {
-        const Value& name = algorithms[i]["name"];
-        std::cout << "Name: " << name.GetString() << std::endl;
-      }
-    }
-  }
-  return 0;
-}
