@@ -10,6 +10,7 @@
 #include <iostream>
 #include <iomanip>
 #include <memory>
+#include <future>
 #include "types.h"
 #include "graph_basics.h"
 #include "tp_client.h"
@@ -1332,6 +1333,9 @@ bool parseTxtGraphFile(std::string graphfile, std::vector<Node>& n,
   return false;
 }
 }
+  
+
+using namespace std::placeholders;
 
 int main(int argc, char* argv[]) {
   /////////////////////////////////////
@@ -1363,7 +1367,8 @@ int main(int argc, char* argv[]) {
   }
 
   TPClient tpclient(server_url);
-  Core core(tpclient.request_core(1000, 5, 400, 0.01));
+  auto request_core = [&tpclient]()->Core{return tpclient.request_core(1000, 5, 400, 0.01);};
+  std::future<Core> core_future = std::async(std::launch::async, request_core);
 
   /////////////////////////////////////
   // Window and OpenGL Context creation
@@ -1442,6 +1447,7 @@ int main(int argc, char* argv[]) {
 
     /* Create renderable graph (mesh) */
     Graph lineGraph;
+    Core core(core_future.get());
     lineGraph.addSubgraph(core.draw.nodes, core.draw.edges);
 
     /* Create a orbital camera */
