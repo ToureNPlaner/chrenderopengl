@@ -2,6 +2,7 @@
 #include <GLFW/glfw3.h>
 
 #include <array>
+#include <chrono>
 #include <vector>
 #include <fstream>
 #include <sstream>
@@ -1364,10 +1365,7 @@ int main(int argc, char* argv[]) {
   }
 
   TPClient tpclient(server_url);
-  auto request_core = [&tpclient]() -> Core {
-    return tpclient.request_core(1000, 5, 400, 0.01);
-  };
-  std::future<Core> core_future = std::async(std::launch::async, request_core);
+  std::future<Core> core_future = std::async(std::launch::async, &TPClient::request_core, &tpclient, 1000u, 5, 400, 0.01);
 
   /////////////////////////////////////
   // Window and OpenGL Context creation
@@ -1484,12 +1482,9 @@ int main(int argc, char* argv[]) {
     // glDisable(GL_CULL_FACE);
     // glDisable(GL_DEPTH_TEST);
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-    auto request_bundle = [&tpclient](const BoundingBox& bbox)->Draw { return tpclient.request_bundle(bbox, 1000u, 40, 5, 400, 0.01);};
-    BoundingBox bbox;
-    auto bundle_future = std::async(std::launch::async, request_bundle, bbox);
-    Draw bundle = bundle_future.get();
 
     BoundingBox old;
+    std::future<Draw> bundle_future;
     /* Loop until the user closes the window */
     while (!glfwWindowShouldClose(window)) {
       Controls::updateOrbitalCamera(window);
@@ -1525,12 +1520,16 @@ int main(int argc, char* argv[]) {
       float scale = std::min((0.0025 / (camera.orbit - 1.0f)), 2.0);
 
       BoundingBox bbox = camera.computeVisibleArea();
-      if(bbox != old){
-        auto bundle_future = std::async(std::launch::async, request_bundle, bbox);
-        Draw bundle = bundle_future.get();
-        lineGraph.subgraphs[1]->loadGraphData(bundle.nodes, bundle.edges);
-        lineGraph.subgraphs[1]->loadGraphData(bundle.nodes, bundle.edges);
-        lineGraph.subgraphs[1]->isVisible = true;
+      if(bundle_future.valid()){
+        std::future_status status = bundle_future.wait_for(std::chrono::milliseconds(5));
+        if(status == std::future_status::ready){
+          Draw bundle = bundle_future.get();
+          lineGraph.subgraphs[1]->loadGraphData(bundle.nodes, bundle.edges);
+          lineGraph.subgraphs[1]->isVisible = true;
+        }
+      }
+      if(bbox != old && !bundle_future.valid()){
+        bundle_future = std::async(std::launch::async, &TPClient::request_bundle, &tpclient, bbox, 1000u, 40, 5, 400, 0.01);
         old = bbox;
       }
       lineGraph.draw(scale);
