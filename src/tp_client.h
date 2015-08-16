@@ -24,7 +24,7 @@ class TPClient {
   }
   Core request_core(uint node_count, int min_length, int max_length,
                     double max_ratio);
-  void request_bundle(BoundingBox& bbox, uint core_size, int min_prio,
+  Draw request_bundle(const BoundingBox& bbox, uint core_size, int min_prio,
                       int min_length, int max_length, double max_ratio);
 
  private:

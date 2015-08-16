@@ -51,4 +51,24 @@ struct BoundingBox {
 
   float max_longitude;
   float max_latitude;
+
+  BoundingBox():min_longitude(0),min_latitude(0),max_longitude(0),max_latitude(0){}
+
+  bool operator!=(const BoundingBox other){
+    const long multiplier = 10000000;
+    int diff = 0;
+    const int min_lat = min_latitude * multiplier;
+    const int min_lat_o = other.min_latitude * multiplier;
+    diff += std::abs(min_lat-min_lat_o);
+    const int min_lon = min_longitude * multiplier;
+    const int min_lon_o = other.min_longitude * multiplier;
+    diff += std::abs(min_lon-min_lon_o);
+    const int max_lat = max_latitude * multiplier;
+    const int max_lat_o = other.max_latitude * multiplier;
+    diff += std::abs(max_lat-max_lat_o);
+    const int max_lon = max_longitude * multiplier;
+    const int max_lon_o = other.max_longitude * multiplier;
+    diff += std::abs(max_lon-max_lon_o);
+    return diff >= 1000;
+  }
 };

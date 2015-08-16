@@ -662,14 +662,14 @@ struct OrbitalCamera {
         right_intersection_lon = -180.0f - right_intersection_lon;
     }
 
-    bbox.min_longitude = longitude - abs(right_intersection_lon - longitude);
+    bbox.min_longitude = longitude - std::abs(right_intersection_lon - longitude);
     bbox.min_longitude = (bbox.min_longitude < -180.0f)
                              ? 360.0f + bbox.min_longitude
                              : bbox.min_longitude;
 
     bbox.max_longitude = right_intersection_lon;
 
-    bbox.min_latitude = latitude - abs(upper_intersection_lat - latitude);
+    bbox.min_latitude = latitude - std::abs(upper_intersection_lat - latitude);
     bbox.max_latitude = upper_intersection_lat;
 
     return bbox;
@@ -1413,12 +1413,6 @@ int main(int argc, char* argv[]) {
   /* Hide cursor */
   // glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_HIDDEN);
 
-  ////////////////////////////
-  // Load graph data from file
-  ////////////////////////////
-
-  std::vector<Node> nodes;
-  std::vector<Edge> edges;
 
   /////////////////////////////////////////////////////////////////////
   // Creation of graphics resources, i.e. shader programs, meshes, etc.
@@ -1447,6 +1441,10 @@ int main(int argc, char* argv[]) {
     Graph lineGraph;
     Core core(core_future.get());
     lineGraph.addSubgraph(core.draw.nodes, core.draw.edges);
+    std::unique_ptr<Subgraph> subgraph(new Subgraph);
+    subgraph->isVisible = false;
+    lineGraph.addSubgraph(core.draw.nodes, core.draw.edges);
+    lineGraph.subgraphs.push_back(std::move(subgraph));
 
     /* Create a orbital camera */
     OrbitalCamera camera;
@@ -1486,7 +1484,12 @@ int main(int argc, char* argv[]) {
     // glDisable(GL_CULL_FACE);
     // glDisable(GL_DEPTH_TEST);
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+    auto request_bundle = [&tpclient](const BoundingBox& bbox)->Draw { return tpclient.request_bundle(bbox, 1000u, 40, 5, 400, 0.01);};
+    BoundingBox bbox;
+    auto bundle_future = std::async(std::launch::async, request_bundle, bbox);
+    Draw bundle = bundle_future.get();
 
+    BoundingBox old;
     /* Loop until the user closes the window */
     while (!glfwWindowShouldClose(window)) {
       Controls::updateOrbitalCamera(window);
@@ -1521,11 +1524,19 @@ int main(int argc, char* argv[]) {
 
       float scale = std::min((0.0025 / (camera.orbit - 1.0f)), 2.0);
 
+      BoundingBox bbox = camera.computeVisibleArea();
+      if(bbox != old){
+        auto bundle_future = std::async(std::launch::async, request_bundle, bbox);
+        Draw bundle = bundle_future.get();
+        lineGraph.subgraphs[1]->loadGraphData(bundle.nodes, bundle.edges);
+        lineGraph.subgraphs[1]->loadGraphData(bundle.nodes, bundle.edges);
+        lineGraph.subgraphs[1]->isVisible = true;
+        old = bbox;
+      }
       lineGraph.draw(scale);
 
       // labels.draw(camera);
 
-      BoundingBox bbox = camera.computeVisibleArea();
       // std::cout << std::fixed;
       // std::cout << std::setprecision(20);
       // std::cout<<"min latitude: "<<bbox.min_latitude<<" max latitude:

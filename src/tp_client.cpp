@@ -83,9 +83,61 @@ Core TPClient::request_core(uint node_count, int min_length, int max_length,
   for (auto it = draw_edges.begin(); it != draw_edges.end();) {
     uint src = *it++;
     uint trgt = *it++;
-    uint weight = *it++;
-    draw.edges.emplace_back(Edge(src, trgt, weight / 10, 1));
+    it++;
+    draw.edges.emplace_back(Edge(src, trgt, 1, 1));
   }
 
   return Core(std::move(draw));
+}
+
+Draw TPClient::request_bundle(const BoundingBox& bbox, uint core_size, int min_prio, int min_length, int max_length, double max_ratio) {
+  const long multiplier = 10000000;
+  const int node_count = 800;
+  const int lat_min = bbox.min_latitude*multiplier;
+  const int lon_min = bbox.min_longitude*multiplier;
+  const int lat_max = bbox.max_latitude*multiplier;
+  const int lon_max = bbox.max_longitude*multiplier;
+  const int width = lat_max-lat_min;
+  const int height = lon_max-lon_min;
+  //lat 478632064lon 82457144width 9277472height 24863696
+  //std::cout << "lat " << lat_min << " lon " << lon_min << " width " << width << " height " << height <<std::endl;
+  json body = {
+    {"bbox", 
+      {
+        {"x", lat_min},
+        {"y", lon_min},
+        {"width", width},
+        {"height", height},
+      }
+    },
+
+    {"level", min_prio},
+    {"nodeCount", node_count},
+    {"coreSize", core_size},
+    {"mode", "auto"},
+    {"minLen", min_length},
+    {"maxLen", max_length},
+    {"maxRatio", max_ratio},
+    {"coords", "latlon"}
+  };
+  json res = post("/algbbbundle", body);
+  Draw draw;
+  auto vertices = res["draw"]["vertices"];
+  const double divider = 10000000;
+  for(auto it = vertices.begin(); it != vertices.end();){
+    double lat = (double) *it++/divider;
+    double lon = (double) *it++/divider;
+    draw.nodes.emplace_back(Node(lat, lon));
+  }
+
+  auto draw_edges = res["draw"]["edges"];
+  for(auto it = draw_edges.begin(); it != draw_edges.end();){
+    uint src = *it++;
+    uint trgt = *it++;
+    it++;
+    draw.edges.emplace_back(Edge(src, trgt, 1, 0));
+  }
+
+
+  return draw;
 }
