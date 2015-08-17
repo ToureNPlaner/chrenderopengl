@@ -8,6 +8,8 @@
 #include <cstring>
 #include "tp_client.h"
 
+using json = nlohmann::json;
+
 static size_t string_write_callback(void* contents, size_t size, size_t nmemb,
                                     void* userp) {
   ((std::string*)userp)->append((char*)contents, size * nmemb);
@@ -62,14 +64,10 @@ json TPClient::post(const std::string& resource, const json& body) {
   return json::parse(std::move(read_buffer));
 }
 
+
 Core TPClient::request_core(uint node_count, int min_length, int max_length,
                             double max_ratio) {
-  json body = {{"nodeCount", node_count},
-               {"minLen", min_length},
-               {"maxLen", max_length},
-               {"maxRatio", max_ratio},
-               {"coords", "latlon"}};
-  json res = post("/algdrawcore", body);
+  json res = request_core_json(node_count, min_length, max_length, max_ratio);
   Draw draw;
   auto vertices = res["draw"]["vertices"];
   const double divider = 10000000;
@@ -83,14 +81,47 @@ Core TPClient::request_core(uint node_count, int min_length, int max_length,
   for (auto it = draw_edges.begin(); it != draw_edges.end();) {
     uint src = *it++;
     uint trgt = *it++;
-    it++;
-    draw.edges.emplace_back(Edge(src, trgt, 1, 1));
+    uint type = *it++;
+    draw.edges.emplace_back(Edge(src, trgt, type/2, type));
   }
 
   return Core(std::move(draw));
 }
 
 Draw TPClient::request_bundle(const BoundingBox& bbox, uint core_size, int min_prio, int min_length, int max_length, double max_ratio) {
+  json res = request_bundle_json(bbox, core_size, min_prio, min_length, max_length, max_ratio);
+  Draw draw;
+  auto vertices = res["draw"]["vertices"];
+  const double divider = 10000000;
+  for(auto it = vertices.begin(); it != vertices.end();){
+    double lat = (double) *it++/divider;
+    double lon = (double) *it++/divider;
+    draw.nodes.emplace_back(Node(lat, lon));
+  }
+
+  auto draw_edges = res["draw"]["edges"];
+  for(auto it = draw_edges.begin(); it != draw_edges.end();){
+    uint src = *it++;
+    uint trgt = *it++;
+    uint type = *it++;
+    draw.edges.emplace_back(Edge(src, trgt, type/2, type));
+  }
+
+
+  return draw;
+}
+
+json TPClient::request_core_json(uint node_count, int min_length, int max_length,
+                            double max_ratio) {
+  json body = {{"nodeCount", node_count},
+               {"minLen", min_length},
+               {"maxLen", max_length},
+               {"maxRatio", max_ratio},
+               {"coords", "latlon"}};
+  return post("/algdrawcore", body);
+}
+
+json TPClient::request_bundle_json(const BoundingBox& bbox, uint core_size, int min_prio, int min_length, int max_length, double max_ratio) {
   const long multiplier = 10000000;
   const int node_count = 800;
   const int lat_min = bbox.min_latitude*multiplier;
@@ -120,24 +151,5 @@ Draw TPClient::request_bundle(const BoundingBox& bbox, uint core_size, int min_p
     {"maxRatio", max_ratio},
     {"coords", "latlon"}
   };
-  json res = post("/algbbbundle", body);
-  Draw draw;
-  auto vertices = res["draw"]["vertices"];
-  const double divider = 10000000;
-  for(auto it = vertices.begin(); it != vertices.end();){
-    double lat = (double) *it++/divider;
-    double lon = (double) *it++/divider;
-    draw.nodes.emplace_back(Node(lat, lon));
-  }
-
-  auto draw_edges = res["draw"]["edges"];
-  for(auto it = draw_edges.begin(); it != draw_edges.end();){
-    uint src = *it++;
-    uint trgt = *it++;
-    it++;
-    draw.edges.emplace_back(Edge(src, trgt, 1, 0));
-  }
-
-
-  return draw;
+  return post("/algbbbundle", body);
 }

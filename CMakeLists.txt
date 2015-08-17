@@ -75,6 +75,7 @@ endif()
 add_executable(chrender
 	  src/chrender.cpp
     src/tp_client.cpp
+    src/tp_tester.cpp
 )
 
 set_property(TARGET chrender PROPERTY INTERPROCEDURAL_OPTIMIZATION True)

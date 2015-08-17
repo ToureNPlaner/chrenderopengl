@@ -1368,7 +1368,8 @@ int main(int argc, char* argv[]) {
   }
 
   TPClient tpclient(server_url);
-  std::future<Core> core_future = std::async(std::launch::async, &TPClient::request_core, &tpclient, 1000u, 5, 400, 0.01);
+  const uint core_size = 2000;
+  std::future<Core> core_future = std::async(std::launch::async, &TPClient::request_core, &tpclient, core_size, 5, 400, 0.01);
 
   /////////////////////////////////////
   // Window and OpenGL Context creation
@@ -1532,7 +1533,7 @@ int main(int argc, char* argv[]) {
         }
       }
       if(bbox != old && !bundle_future.valid()){
-        bundle_future = std::async(std::launch::async, &TPClient::request_bundle, &tpclient, bbox, 1000u, 40, 5, 400, 0.01);
+        bundle_future = std::async(std::launch::async, &TPClient::request_bundle, &tpclient, bbox, core_size, 40, 5, 400, 0.01);
         old = bbox;
       }
       lineGraph.draw(scale);
