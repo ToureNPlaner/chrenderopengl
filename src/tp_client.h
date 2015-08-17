@@ -31,13 +31,6 @@ class TPClient {
  private:
   // TODO add error handling
   json post(const std::string& resource, const json& body);
-
-
-  json request_core_json(uint node_count, int min_length, int max_length,
-                    double max_ratio);
-  json request_bundle_json(const BoundingBox& bbox, uint core_size, int min_prio,
-                      int min_length, int max_length, double max_ratio);
-
   std::string base_url;
   CURL* curl;
   curl_slist* json_header;
