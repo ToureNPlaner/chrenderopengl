@@ -95,7 +95,7 @@ Core TPClient::request_core(uint node_count, int min_length, int max_length,
 
 Draw TPClient::request_bundle(const BoundingBox& bbox, uint core_size, int min_prio, int min_length, int max_length, double max_ratio) {
   const long multiplier = 10000000;
-  const int node_count = 800;
+  const int node_count_hint = 800;
   const int lat_min = bbox.min_latitude*multiplier;
   const int lon_min = bbox.min_longitude*multiplier;
   const int lat_max = bbox.max_latitude*multiplier;
@@ -115,7 +115,7 @@ Draw TPClient::request_bundle(const BoundingBox& bbox, uint core_size, int min_p
     },
 
     {"level", min_prio},
-    {"nodeCount", node_count},
+    {"nodeCountHint", node_count_hint},
     {"coreSize", core_size},
     {"mode", "auto"},
     {"minLen", min_length},
