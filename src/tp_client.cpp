@@ -82,7 +82,7 @@ Core TPClient::request_core(uint node_count, int min_length, int max_length,
     draw.nodes.emplace_back(Node(lat, lon));
   }
 
-  auto draw_edges = res["draw"]["edges"];
+  auto draw_edges = res["draw"]["lines"];
   for (auto it = draw_edges.begin(); it != draw_edges.end();) {
     uint src = *it++;
     uint trgt = *it++;
@@ -133,7 +133,7 @@ Draw TPClient::request_bundle(const BoundingBox& bbox, uint core_size, int min_p
     draw.nodes.emplace_back(Node(lat, lon));
   }
 
-  auto draw_edges = res["draw"]["edges"];
+  auto draw_edges = res["draw"]["lines"];
   for(auto it = draw_edges.begin(); it != draw_edges.end();){
     uint src = *it++;
     uint trgt = *it++;
