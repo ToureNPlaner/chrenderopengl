@@ -114,7 +114,7 @@ Draw TPClient::request_bundle(const BoundingBox& bbox, uint core_size, int min_p
       }
     },
 
-    {"level", min_prio},
+    {"minPrio", min_prio},
     {"nodeCountHint", node_count_hint},
     {"coreSize", core_size},
     {"mode", "auto"},
