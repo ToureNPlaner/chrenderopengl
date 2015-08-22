@@ -1,6 +1,9 @@
 #pragma once
-#include <utility>
-#include <vector>
+#include<utility>
+#include<iostream>
+#include<cmath>
+#include<vector>
+#include"types.h"
 
 /**
  * Node struct for parsing preprocessed osm graph from file
@@ -16,16 +19,7 @@ struct Node {
 const double EARTH_RADIUS = 6372797.560856;
 const double DEG_TO_RAD = 0.017453292519943295769236907684886;
 
-double inline euclidian_distance(const Node& from, const Node& to){
-  double latitudeArc  = (from.lat - to.lat) * DEG_TO_RAD;
-  double longitudeArc = (from.lon - to.lon) * DEG_TO_RAD;
-  double latitudeH = sin(latitudeArc * 0.5);
-  latitudeH *= latitudeH;
-  double lontitudeH = sin(longitudeArc * 0.5);
-  lontitudeH *= lontitudeH;
-  double tmp = cos(from.lat*DEG_TO_RAD) * cos(to.lat*DEG_TO_RAD);
-  return 2.0 * asin(sqrt(latitudeH + tmp*lontitudeH))*EARTH_RADIUS;
-}
+double euclidian_distance(const Node& from, const Node& to);
 
 /**
  * Edge struct for parsing preprocessed osm graph from file
