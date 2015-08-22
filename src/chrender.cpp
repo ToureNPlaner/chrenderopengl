@@ -1368,7 +1368,7 @@ int main(int argc, char* argv[]) {
   }
 
   TPClient tpclient(server_url);
-  const uint core_size = 2000;
+  const uint core_size = 6000;
   std::future<Core> core_future = std::async(std::launch::async, &TPClient::request_core, &tpclient, core_size, 5, 400, 0.01);
 
   /////////////////////////////////////
