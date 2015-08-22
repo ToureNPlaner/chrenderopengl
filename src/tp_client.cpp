@@ -107,10 +107,10 @@ Draw TPClient::request_bundle(const BoundingBox& bbox, uint core_size, int min_p
   json body = {
     {"bbox", 
       {
-        {"x", lat_min},
-        {"y", lon_min},
-        {"width", width},
-        {"height", height},
+        {"x", lat_min-width},
+        {"y", lon_min-width},
+        {"width", width*3},
+        {"height", height*3},
       }
     },
 
