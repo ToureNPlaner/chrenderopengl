@@ -57,7 +57,7 @@ json TPClient::post(const std::string& resource, const json& body) {
     if (res != CURLE_OK) {
       std::cerr << "Curl request failed: " << curl_easy_strerror(res)
                 << std::endl;
-      return read_buffer;
+      return json::parse("null");
     }
   }
   // No copy here since RVO or move
