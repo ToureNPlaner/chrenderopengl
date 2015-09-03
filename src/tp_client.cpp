@@ -50,6 +50,7 @@ json TPClient::post(const std::string& resource, const json& body) {
     curl_easy_setopt(curl, CURLOPT_READFUNCTION, string_read_callback);
     curl_easy_setopt(curl, CURLOPT_READDATA, &srh);
     curl_easy_setopt(curl, CURLOPT_POSTFIELDSIZE, srh.s.size());
+    curl_easy_setopt(curl, CURLOPT_ACCEPT_ENCODING, "");
 
     curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, string_write_callback);
     curl_easy_setopt(curl, CURLOPT_WRITEDATA, &read_buffer);
