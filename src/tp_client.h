@@ -15,6 +15,7 @@ class TPClient {
     curl_global_init(CURL_GLOBAL_ALL);
     curl = curl_easy_init();
     json_header = curl_slist_append(json_header, "Accept: application/json");
+    json_header = curl_slist_append(json_header, "Content-Type: application/json");
   }
   ~TPClient() {
     if (curl) {
