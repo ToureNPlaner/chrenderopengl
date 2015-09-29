@@ -1,4 +1,4 @@
-# The Simplest Graph Renderer there is
+# The OpenGL based CH Renderer
 
 Dependencies:
 
