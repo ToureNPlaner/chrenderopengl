@@ -13,13 +13,13 @@ To build super lazy on Linux:
 
 To build:
 ```
-    mkdir build
-    cd build
-    cmake ../
+mkdir build
+cd build
+cmake ../
 ```
 
 To run:
 ```
-    cd build
-    ./chrender -s http://localhost:8080
+cd build
+./chrender -s http://localhost:8080
 ```
