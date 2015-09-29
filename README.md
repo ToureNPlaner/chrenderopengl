@@ -1,4 +1,4 @@
-The Simplest Graph Renderer there is
+# The Simplest Graph Renderer there is
 
 Dependencies:
 
@@ -7,16 +7,18 @@ Dependencies:
     * GLFW
 
 To build super lazy on Linux:
-
-    ./build.sh 
-
+```
+./build.sh
+```
 
 To build:
-    
+```
     mkdir build
     cd build
     cmake ../
+```
 
 To run (in build):
-
-    ./chrender
+```
+    ./chrender http://localhost:8080
+```
