@@ -18,7 +18,8 @@ To build:
     cmake ../
 ```
 
-To run (in build):
+To run:
 ```
-    ./chrender http://localhost:8080
+    cd build
+    ./chrender -s http://localhost:8080
 ```
