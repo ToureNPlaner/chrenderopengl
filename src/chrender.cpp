@@ -1531,10 +1531,9 @@ int main(int argc, char* argv[]) {
           lineGraph.subgraphs[1]->loadGraphData(bundle.nodes, bundle.edges);
           lineGraph.subgraphs[1]->isVisible = true;
         }
-      }
-      if(bbox != old && !bundle_future.valid()){
+      } else if (bbox != old) {
         double bbox_diagonal = euclidian_distance({bbox.min_latitude, bbox.min_longitude}, {bbox.max_latitude, bbox.max_longitude});
-        bundle_future = std::async(std::launch::async, &TPClient::request_bundle, &tpclient, bbox, core_size, 40, bbox_diagonal*0.005, bbox_diagonal*0.02, 0.006);
+        bundle_future = std::async(std::launch::async, &TPClient::request_bundle, &tpclient, bbox, core_size, 40, bbox_diagonal*0.005, bbox_diagonal*0.02, 0.006, "AUTO");
         old = bbox;
       }
       lineGraph.draw(scale);
