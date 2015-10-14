@@ -16,7 +16,8 @@
 #include "graph_basics.h"
 #include "tp_client.h"
 
-typedef unsigned int uint;
+using uint = unsigned int;
+using milliseconds = std::chrono::duration<double, std::milli>;
 
 namespace Math {
 #define PI 3.141592653589793238462643383279502884197169399375105820f
@@ -1206,10 +1207,27 @@ void windowSizeCallback(GLFWwindow* window, int width, int height) {
   active_camera->updateProjectionMatrix();
 }
 
+namespace Params {
+  bool MEASSURE = false;
+  bool LEVEL_SEQUENCE = false;
+  TPClient::LevelMode mode = TPClient::LevelMode::AUTO;
+  uint curr_level_hint = 40;
+}
+
 namespace Controls {
 
 namespace {
 std::array<float, 2> latest_cursor_position = {{0.0, 0.0}};
+}
+
+
+void keyCallback(GLFWwindow* window, int key, int scancode, int action, int mods) {
+  if(key == GLFW_KEY_M && action == GLFW_PRESS) {
+    Params::MEASSURE = true;
+  } else if (key == GLFW_KEY_L && action == GLFW_PRESS) {
+    Params::LEVEL_SEQUENCE = true;
+    Params::mode = TPClient::LevelMode::EXACT;
+  }
 }
 
 void mouseScrollFeedback(GLFWwindow* window, double x_offset, double y_offset) {
@@ -1412,6 +1430,7 @@ int main(int argc, char* argv[]) {
   /* Intialize controls */
   glfwSetWindowSizeCallback(window, windowSizeCallback);
   glfwSetScrollCallback(window, Controls::mouseScrollFeedback);
+  glfwSetKeyCallback(window, Controls::keyCallback);
   /* Hide cursor */
   // glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_HIDDEN);
 
@@ -1494,6 +1513,7 @@ int main(int argc, char* argv[]) {
       Controls::updateOrbitalCamera(window);
 
       /* Render here */
+      auto render_setup_start = std::chrono::steady_clock::now();
       glBindFramebuffer(GL_FRAMEBUFFER, 0);
       glClearColor(0.2f, 0.2f, 0.2f, 1.0f);
       glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
@@ -1524,6 +1544,8 @@ int main(int argc, char* argv[]) {
       float scale = std::min((0.0025 / (camera.orbit - 1.0f)), 2.0);
 
       BoundingBox bbox = camera.computeVisibleArea();
+      auto render_setup_end = std::chrono::steady_clock::now();
+      milliseconds render_setup_time = render_setup_end-render_setup_start;
       if(bundle_future.valid()){
         std::future_status status = bundle_future.wait_for(std::chrono::milliseconds(5));
         if(status == std::future_status::ready){
@@ -1533,7 +1555,7 @@ int main(int argc, char* argv[]) {
         }
       } else if (bbox != old) {
         double bbox_diagonal = euclidian_distance({bbox.min_latitude, bbox.min_longitude}, {bbox.max_latitude, bbox.max_longitude});
-        bundle_future = std::async(std::launch::async, &TPClient::request_bundle, &tpclient, bbox, core_size, 40, bbox_diagonal*0.005, bbox_diagonal*0.02, 0.006, TPClient::LevelMode::AUTO);
+        bundle_future = std::async(std::launch::async, &TPClient::request_bundle, &tpclient, bbox, core_size, 40, bbox_diagonal*0.005, bbox_diagonal*0.02, 0.006, Params::mode);
         old = bbox;
       }
       lineGraph.draw(scale);
@@ -1548,6 +1570,9 @@ int main(int argc, char* argv[]) {
       // "<<bbox.max_longitude<<std::endl;
       // std::cout<<"camera lon: "<<camera.longitude<<"
       // "<<camera.latitude<<std::endl;
+      if (Params::MEASSURE) {
+        std::cout << "GLDRAWDATA[Render Setup Time (ms)]:" << render_setup_time.count() << std::endl;
+      }
 
       /* Swap front and back buffers */
       glfwSwapBuffers(window);
