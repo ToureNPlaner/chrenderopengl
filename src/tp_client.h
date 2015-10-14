@@ -10,6 +10,12 @@ class TPClient {
   using json = nlohmann::json;
   friend class TPTester;
  public:
+  enum LevelMode {
+    EXACT,
+    AUTO,
+    HINTED
+  };
+
   TPClient(const std::string& base_url) : base_url(base_url), json_header(nullptr) {
     // This is NOT THREAD SAFE so create TPClient at the start of main
     curl_global_init(CURL_GLOBAL_ALL);
@@ -27,7 +33,7 @@ class TPClient {
   Core request_core(uint node_count, int min_length, int max_length,
                     double max_ratio);
   Draw request_bundle(const BoundingBox& bbox, uint core_size, int min_prio,
-                      int min_length, int max_length, double max_ratio, const std::string& mode);
+                      int min_length, int max_length, double max_ratio, LevelMode mode);
 
  private:
   // TODO add error handling
@@ -35,4 +41,8 @@ class TPClient {
   std::string base_url;
   CURL* curl;
   curl_slist* json_header;
+  const char* level_mode(LevelMode mode) {
+    const char* const level_mode_map[] = {"EXACT", "AUTO", "HINTED"};
+    return level_mode_map[mode];
+  };
 };

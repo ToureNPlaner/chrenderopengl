@@ -1533,7 +1533,7 @@ int main(int argc, char* argv[]) {
         }
       } else if (bbox != old) {
         double bbox_diagonal = euclidian_distance({bbox.min_latitude, bbox.min_longitude}, {bbox.max_latitude, bbox.max_longitude});
-        bundle_future = std::async(std::launch::async, &TPClient::request_bundle, &tpclient, bbox, core_size, 40, bbox_diagonal*0.005, bbox_diagonal*0.02, 0.006, "AUTO");
+        bundle_future = std::async(std::launch::async, &TPClient::request_bundle, &tpclient, bbox, core_size, 40, bbox_diagonal*0.005, bbox_diagonal*0.02, 0.006, TPClient::LevelMode::AUTO);
         old = bbox;
       }
       lineGraph.draw(scale);
