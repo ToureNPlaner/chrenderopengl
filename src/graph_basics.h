@@ -39,31 +39,34 @@ struct Edge {
  * Holds graph data for drawing
  */
 struct Draw {
-  Draw() {}
-  Draw(Draw& other):nodes(other.nodes),edges(other.edges){}
-  Draw(const Draw& other):nodes(other.nodes),edges(other.edges){}
+  Draw(): level(0){}
+  Draw(Draw& other):nodes(other.nodes), edges(other.edges), level(other.level){}
+  Draw(const Draw& other):nodes(other.nodes), edges(other.edges), level(other.level){}
 
   Draw(const std::vector<Node>& nodes_in, const std::vector<Edge>& edges_in)
-      : nodes(nodes_in), edges(edges_in) {
+      : nodes(nodes_in), edges(edges_in), level(0) {
     std::cerr << "Draw Copy Constructor called" << std::endl;
   }
   Draw(std::vector<Node>&& nodes_in, std::vector<Edge>&& edges_in)
-      : nodes(std::move(nodes_in)), edges(std::move(edges_in)) {}
+      : nodes(std::move(nodes_in)), edges(std::move(edges_in)), level(0) {}
 
   Draw& operator=(Draw& other){
     nodes = other.nodes;
     edges = other.edges;
+    level = other.level;
     return *this;
   }
 
   Draw& operator=(Draw&& other){
     nodes = std::move(other.nodes);
     edges = std::move(other.edges);
+    level = std::move(other.level);
     return *this;
   }
 
   std::vector<Node> nodes;
   std::vector<Edge> edges;
+  unsigned int level;
 };
 
 /**

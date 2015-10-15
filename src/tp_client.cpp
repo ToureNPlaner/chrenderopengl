@@ -75,6 +75,7 @@ Core TPClient::request_core(uint node_count, int min_length, int max_length,
                {"coords", "latlon"}};
   json res =  post("/algdrawcore", body);
   Draw draw;
+  draw.level = 0;
   auto vertices = res["draw"]["vertices"];
   const double divider = 10000000;
   for (auto it = vertices.begin(); it != vertices.end();) {
@@ -126,6 +127,7 @@ Draw TPClient::request_bundle(const BoundingBox& bbox, uint core_size, int min_p
   };
   json res = post("/algbbbundle", body);
   Draw draw;
+  draw.level = res["head"]["level"];
   auto vertices = res["draw"]["vertices"];
   const double divider = 10000000;
   for(auto it = vertices.begin(); it != vertices.end();){
