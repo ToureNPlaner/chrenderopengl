@@ -40,12 +40,28 @@ struct Edge {
  */
 struct Draw {
   Draw() {}
+  Draw(Draw& other):nodes(other.nodes),edges(other.edges){}
+  Draw(const Draw& other):nodes(other.nodes),edges(other.edges){}
+
   Draw(const std::vector<Node>& nodes_in, const std::vector<Edge>& edges_in)
       : nodes(nodes_in), edges(edges_in) {
     std::cerr << "Draw Copy Constructor called" << std::endl;
   }
   Draw(std::vector<Node>&& nodes_in, std::vector<Edge>&& edges_in)
       : nodes(std::move(nodes_in)), edges(std::move(edges_in)) {}
+
+  Draw& operator=(Draw& other){
+    nodes = other.nodes;
+    edges = other.edges;
+    return *this;
+  }
+
+  Draw& operator=(Draw&& other){
+    nodes = std::move(other.nodes);
+    edges = std::move(other.edges);
+    return *this;
+  }
+
   std::vector<Node> nodes;
   std::vector<Edge> edges;
 };

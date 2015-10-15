@@ -1223,10 +1223,14 @@ std::array<float, 2> latest_cursor_position = {{0.0, 0.0}};
 
 void keyCallback(GLFWwindow* window, int key, int scancode, int action, int mods) {
   if(key == GLFW_KEY_M && action == GLFW_PRESS) {
-    Params::MEASSURE = true;
+    Params::MEASSURE = !Params::MEASSURE;
   } else if (key == GLFW_KEY_L && action == GLFW_PRESS) {
-    Params::LEVEL_SEQUENCE = true;
-    Params::mode = TPClient::LevelMode::EXACT;
+    Params::LEVEL_SEQUENCE = !Params::LEVEL_SEQUENCE;
+    if(Params::mode == TPClient::LevelMode::AUTO) {
+      Params::mode = TPClient::LevelMode::EXACT;
+    } else {
+      Params::mode = TPClient::LevelMode::AUTO;
+    }
   }
 }
 
@@ -1403,7 +1407,7 @@ int main(int argc, char* argv[]) {
   // glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 4);
   // glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
   // glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GL_TRUE);
-  window = glfwCreateWindow(1600, 900, "CH Graph Renderer", NULL, NULL);
+  window = glfwCreateWindow(1920, 1080, "CH Graph Renderer", NULL, NULL);
   if (!window) {
     glfwTerminate();
     return -1;
@@ -1464,7 +1468,6 @@ int main(int argc, char* argv[]) {
     lineGraph.addSubgraph(core.draw.nodes, core.draw.edges);
     std::unique_ptr<Subgraph> subgraph(new Subgraph);
     subgraph->isVisible = false;
-    lineGraph.addSubgraph(core.draw.nodes, core.draw.edges);
     lineGraph.subgraphs.push_back(std::move(subgraph));
 
     /* Create a orbital camera */
@@ -1509,6 +1512,8 @@ int main(int argc, char* argv[]) {
     BoundingBox old;
     std::future<Draw> bundle_future;
     /* Loop until the user closes the window */
+    milliseconds last_graph_load_time(0);
+    Draw bundle;
     while (!glfwWindowShouldClose(window)) {
       Controls::updateOrbitalCamera(window);
 
@@ -1545,20 +1550,26 @@ int main(int argc, char* argv[]) {
 
       BoundingBox bbox = camera.computeVisibleArea();
       auto render_setup_end = std::chrono::steady_clock::now();
-      milliseconds render_setup_time = render_setup_end-render_setup_start;
+
       if(bundle_future.valid()){
         std::future_status status = bundle_future.wait_for(std::chrono::milliseconds(5));
+
         if(status == std::future_status::ready){
-          Draw bundle = bundle_future.get();
+          auto graph_load_start = std::chrono::steady_clock::now();
+          bundle = bundle_future.get();
           lineGraph.subgraphs[1]->loadGraphData(bundle.nodes, bundle.edges);
           lineGraph.subgraphs[1]->isVisible = true;
+          auto graph_load_end = std::chrono::steady_clock::now();
+          last_graph_load_time = graph_load_end - graph_load_start;
         }
       } else if (bbox != old) {
         double bbox_diagonal = euclidian_distance({bbox.min_latitude, bbox.min_longitude}, {bbox.max_latitude, bbox.max_longitude});
         bundle_future = std::async(std::launch::async, &TPClient::request_bundle, &tpclient, bbox, core_size, 40, bbox_diagonal*0.005, bbox_diagonal*0.02, 0.006, Params::mode);
         old = bbox;
       }
+      auto render_graph_start = std::chrono::steady_clock::now();
       lineGraph.draw(scale);
+      auto render_graph_end = std::chrono::steady_clock::now();
 
       // labels.draw(camera);
 
@@ -1571,7 +1582,15 @@ int main(int argc, char* argv[]) {
       // std::cout<<"camera lon: "<<camera.longitude<<"
       // "<<camera.latitude<<std::endl;
       if (Params::MEASSURE) {
-        std::cout << "GLDRAWDATA[Render Setup Time (ms)]:" << render_setup_time.count() << std::endl;
+        milliseconds render_setup_time = render_setup_end-render_setup_start;
+        milliseconds render_graph_time = render_graph_end-render_graph_start;
+        std::cout << "GLDRAWDATA[Nodes, Lines, Render Setup Time (ms), Draw Graph Time (ms), Last Graph Load Time (ms), Overall Render Time (ms)]:" 
+          << bundle.nodes.size() << ',' 
+          << bundle.edges.size() << ',' 
+          << render_setup_time.count() << ',' 
+          << render_graph_time.count() << ','
+          << last_graph_load_time.count() << ','
+          << (render_setup_time + render_graph_time + last_graph_load_time).count()<< std::endl;
       }
 
       /* Swap front and back buffers */
