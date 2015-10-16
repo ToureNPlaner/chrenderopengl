@@ -60,6 +60,9 @@ json TPClient::post(const std::string& resource, const json& body) {
                 << std::endl;
       return json::parse("null");
     }
+    double content_length;
+    curl_easy_getinfo(curl, CURLINFO_CONTENT_LENGTH_DOWNLOAD, &content_length);
+    std::cout << "Request Size: " << content_length / (double(2<<20)) << " MiB" << std::endl;
   }
   // No copy here since RVO or move
   return json::parse(std::move(read_buffer));
@@ -97,7 +100,7 @@ Core TPClient::request_core(uint node_count, int min_length, int max_length,
 
 Draw TPClient::request_bundle(const BoundingBox& bbox, uint core_size, int min_prio, int min_length, int max_length, double max_ratio, LevelMode mode) {
   const long multiplier = 10000000;
-  const int node_count_hint = 1000;
+  const int node_count_hint = 600;
   const int lat_min = bbox.min_latitude*multiplier;
   const int lon_min = bbox.min_longitude*multiplier;
   const int lat_max = bbox.max_latitude*multiplier;
@@ -109,10 +112,14 @@ Draw TPClient::request_bundle(const BoundingBox& bbox, uint core_size, int min_p
   json body = {
     {"bbox", 
       {
-        {"x", lat_min-width},
+        /*{"x", lat_min-width},
         {"y", lon_min-width},
         {"width", width*3},
-        {"height", height*3},
+        {"height", height*3},*/
+        {"x", lat_min},
+        {"y", lon_min},
+        {"width", width},
+        {"height", height},
       }
     },
 
