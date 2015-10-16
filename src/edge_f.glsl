@@ -9,7 +9,7 @@ void main()
 	vec3 out_color = vec3(0.0);
 
 	if(color < 3.5)
-		out_color = vec3(0.0,0.0,0.0);
+		out_color = vec3(0.8,0.6,1.0);
 	else if(color < 5.5)
 		out_color = vec3(0.3,0.55,0.95);
 	else if(color < 6.5)

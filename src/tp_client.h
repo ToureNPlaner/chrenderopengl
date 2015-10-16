@@ -42,7 +42,7 @@ class TPClient {
   CURL* curl;
   curl_slist* json_header;
   const char* level_mode(LevelMode mode) {
-    const char* const level_mode_map[] = {"EXACT", "AUTO", "HINTED"};
+    const char* const level_mode_map[] = {"exact", "auto", "hinted"};
     return level_mode_map[mode];
   };
 };

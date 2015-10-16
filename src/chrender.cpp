@@ -1211,7 +1211,10 @@ namespace Params {
   bool MEASSURE = false;
   bool LEVEL_SEQUENCE = false;
   TPClient::LevelMode mode = TPClient::LevelMode::AUTO;
+
   uint curr_level_hint = 40;
+  double min_length_factor = 0.005;
+  double max_length_factor = 0.02;
 }
 
 namespace Controls {
@@ -1228,7 +1231,21 @@ void keyCallback(GLFWwindow* window, int key, int scancode, int action, int mods
     Params::LEVEL_SEQUENCE = true;
     Params::mode = TPClient::LevelMode::EXACT;
     Params::curr_level_hint = 0;
-  }
+  } else if (key == GLFW_KEY_DOWN && action == GLFW_PRESS) {
+    Params::curr_level_hint++;
+    Params::mode = TPClient::LevelMode::EXACT;
+    std::cout << "increasing level, now " << Params::curr_level_hint << std::endl;
+  } else if (key == GLFW_KEY_UP && action == GLFW_PRESS) {
+    Params::curr_level_hint--;
+    Params::mode = TPClient::LevelMode::EXACT;
+    std::cout << "decreasing level, now " << Params::curr_level_hint << std::endl;
+  } else if (key == GLFW_KEY_PAGE_UP && action == GLFW_PRESS) {
+    Params::min_length_factor /= 2;
+    Params::min_length_factor /= 2;
+  } else if (key == GLFW_KEY_PAGE_DOWN && action == GLFW_PRESS) {
+    Params::min_length_factor *= 2;
+    Params::min_length_factor *= 2;
+  } 
 }
 
 void mouseScrollFeedback(GLFWwindow* window, double x_offset, double y_offset) {
@@ -1387,7 +1404,7 @@ int main(int argc, char* argv[]) {
   }
 
   TPClient tpclient(server_url);
-  const uint core_size = 1000;
+  const uint core_size = 6000;
   std::future<Core> core_future = std::async(std::launch::async, &TPClient::request_core, &tpclient, core_size, 5, 400, 0.01);
 
   /////////////////////////////////////
@@ -1559,14 +1576,15 @@ int main(int argc, char* argv[]) {
           lineGraph.subgraphs[1]->isVisible = true;
           auto graph_load_end = std::chrono::steady_clock::now();
           graph_load_time = graph_load_end - graph_load_start;
+          Params::curr_level_hint = bundle.level;
           new_bundle = true;
         }
-      } else if (bbox != old || Params::LEVEL_SEQUENCE) {
+      } else if (bbox != old || Params::curr_level_hint != bundle.level || Params::LEVEL_SEQUENCE) {
         double bbox_diagonal = euclidian_distance({bbox.min_latitude, bbox.min_longitude}, {bbox.max_latitude, bbox.max_longitude});
         if (Params::LEVEL_SEQUENCE) {
           Params::curr_level_hint = (Params::curr_level_hint + 1) % 400;
         }
-        bundle_future = std::async(std::launch::async, &TPClient::request_bundle, &tpclient, bbox, core_size, Params::curr_level_hint, bbox_diagonal*0.005, bbox_diagonal*0.02, 0.006, Params::mode);
+        bundle_future = std::async(std::launch::async, &TPClient::request_bundle, &tpclient, bbox, core_size, Params::curr_level_hint, bbox_diagonal*Params::min_length_factor, bbox_diagonal*Params::max_length_factor, 0.006, Params::mode);
         old = bbox;
       }
       auto render_graph_start = std::chrono::steady_clock::now();
