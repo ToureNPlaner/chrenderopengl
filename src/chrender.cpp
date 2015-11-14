@@ -1240,11 +1240,11 @@ void keyCallback(GLFWwindow* window, int key, int scancode, int action, int mods
     Params::mode = TPClient::LevelMode::EXACT;
     std::cout << "decreasing level, now " << Params::curr_level_hint << std::endl;
   } else if (key == GLFW_KEY_PAGE_UP && action == GLFW_PRESS) {
-    Params::min_length_factor /= 2;
-    Params::min_length_factor /= 2;
+    Params::min_length_factor /= 1.1;
+    Params::min_length_factor /= 1.1;
   } else if (key == GLFW_KEY_PAGE_DOWN && action == GLFW_PRESS) {
-    Params::min_length_factor *= 2;
-    Params::min_length_factor *= 2;
+    Params::min_length_factor *= 1.1;
+    Params::min_length_factor *= 1.1;
   } 
 }
 
@@ -1404,7 +1404,7 @@ int main(int argc, char* argv[]) {
   }
 
   TPClient tpclient(server_url);
-  const uint core_size = 6000;
+  const uint core_size = 1000;
   std::future<Core> core_future = std::async(std::launch::async, &TPClient::request_core, &tpclient, core_size, 5, 400, 0.01);
 
   /////////////////////////////////////

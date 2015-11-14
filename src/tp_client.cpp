@@ -105,8 +105,8 @@ Draw TPClient::request_bundle(const BoundingBox& bbox, uint core_size, int min_p
   const int lon_min = bbox.min_longitude*multiplier;
   const int lat_max = bbox.max_latitude*multiplier;
   const int lon_max = bbox.max_longitude*multiplier;
-  const int width = lat_max-lat_min;
-  const int height = lon_max-lon_min;
+  const int width = lon_max-lon_min;
+  const int height = lat_max-lat_min;
   //lat 478632064lon 82457144width 9277472height 24863696
   //std::cout << "lat " << lat_min << " lon " << lon_min << " width " << width << " height " << height <<std::endl;
   json body = {
@@ -116,8 +116,8 @@ Draw TPClient::request_bundle(const BoundingBox& bbox, uint core_size, int min_p
         {"y", lon_min-width},
         {"width", width*3},
         {"height", height*3},*/
-        {"x", lat_min},
-        {"y", lon_min},
+        {"x", lon_min},
+        {"y", lat_min},
         {"width", width},
         {"height", height},
       }
