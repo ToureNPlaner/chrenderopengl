@@ -12,6 +12,8 @@
 #include <iomanip>
 #include <memory>
 #include <future>
+#include <map>
+#include <list>
 #include "types.h"
 #include "graph_basics.h"
 #include "tp_client.h"
@@ -22,6 +24,21 @@ using milliseconds = std::chrono::duration<double, std::milli>;
 namespace Math {
 #define PI 3.141592653589793238462643383279502884197169399375105820f
 
+struct Vec2 {
+  Vec2() : x(0.0), y(0.0) {}
+  Vec2(float x, float y) : x(x), y(y) {}
+
+  float x, y;
+
+  Vec2 operator*(const float a) { return Vec2(a * x, a * y); }
+
+  Vec2 operator+(const Vec2& v) { return Vec2(x + v.x, y + v.y); }
+
+  Vec2 operator-(const Vec2& v) { return Vec2(x - v.x, y - v.y); }
+
+  float length() const { return std::sqrt(x * x + y * y); }
+};
+
 struct Vec3 {
   Vec3() : x(0.0), y(0.0), z(0.0) {}
   Vec3(float x, float y, float z) : x(x), y(y), z(z) {}
@@ -31,6 +48,8 @@ struct Vec3 {
   Vec3 operator*(const float a) { return Vec3(a * x, a * y, a * z); }
 
   Vec3 operator+(const Vec3& v) { return Vec3(x + v.x, y + v.y, z + v.z); }
+
+  Vec3 operator-(const Vec3& v) { return Vec3(x - v.x, y - v.y, z - v.z); }
 
   float length() const { return std::sqrt(x * x + y * y + z * z); }
 };
@@ -113,6 +132,19 @@ struct Mat4x4 {
   }
 };
 
+struct Mat2x2 {
+  Mat2x2() : data() {}
+  Mat2x2(const std::array<float, 4> data) : data(data) {}
+
+  std::array<float, 4> data;
+
+  float& operator[](int index) { return data[index]; }
+
+  Vec2 operator*(const Vec2& v) {
+    return Vec2(data[0] * v.x + data[2] * v.y, data[1] * v.x + data[3] * v.y);
+  }
+};
+
 Vec3 operator*(const float a, const Vec3& v) {
   return Vec3(a * v.x, a * v.y, a * v.z);
 }
@@ -124,6 +156,8 @@ Vec3 operator/(const Vec3& v, const float a) {
 float dot(const Vec3& u, const Vec3& v) {
   return (u.x * v.x + u.y * v.y + u.z * v.z);
 }
+
+float dot(const Vec2& u, const Vec2& v) { return (u.x * v.x + u.y * v.y); }
 
 double dot64(const Vec3& u, const Vec3& v) {
   double ux = (double)u.x;
@@ -492,7 +526,7 @@ struct OrbitalCamera {
       : longitude(0.0f),
         latitude(0.0f),
         orbit(5.0f),
-        near(0.1f),
+        near(0.01f),
         far(10.0f),
         fovy(1.0),
         aspect_ratio(1.0) {}
@@ -680,16 +714,16 @@ struct OrbitalCamera {
 
 /**
  * This struct essentially holds a renderable representation of a subgraph as a
- *mesh, which is made up from
+ * mesh, which is made up from
  * a set of vertices and a set of indices (the latter describing the mesh
- *connectivity).
+ * connectivity).
  * In this case the mesh uses line primitives, i.e. two succesive indices
- *describe a single line segment.
+ * describe a single line segment.
  *
  * From a programming point of view, it makes sense to keep the three OpenGL
- *handles required for a mesh obejct
+ * handles required for a mesh obejct
  * organised together in a struct as most high level operations like "send the
- *mesh data to the GPU" require
+ * mesh data to the GPU" require
  * several OpenGL function calls and all of these handles.
  */
 struct Subgraph {
@@ -739,6 +773,7 @@ struct Subgraph {
 
   void loadGraphData(std::vector<Node>& nodes, std::vector<Edge>& edges) {
     index_offsets.clear();
+    index_offsets.push_back(0);
     line_widths.clear();
 
     std::vector<Vertex> vertices;
@@ -752,7 +787,7 @@ struct Subgraph {
 
     // Copy geo coordinates from input nodes to vertices
     for (auto& node : nodes) {
-      vertices.push_back(Vertex(node.lon, node.lat));
+      vertices.push_back(Vertex((float)node.lon, (float)node.lat));
     }
 
     std::sort(edges.begin(), edges.end(),
@@ -772,14 +807,14 @@ struct Subgraph {
       }
 
       if (vertices[src_id].color == -1) {
-        vertices[src_id].color = edge.color;
+        vertices[src_id].color = (float)edge.color;
       }
 
       if (vertices[src_id].color != edge.color) {
-        uint next_id = vertices.size();
+        uint next_id = (uint)vertices.size();
         vertices.push_back(
             Vertex(vertices[src_id].longitude, vertices[src_id].latitude));
-        vertices[next_id].color = edge.color;
+        vertices[next_id].color = (float)edge.color;
         has_next.push_back(false);
         next.push_back(0);
 
@@ -793,14 +828,14 @@ struct Subgraph {
       }
 
       if (vertices[tgt_id].color == -1) {
-        vertices[tgt_id].color = edge.color;
+        vertices[tgt_id].color = (float)edge.color;
       }
 
       if (vertices[tgt_id].color != edge.color) {
         uint next_id = (uint)vertices.size();
         vertices.push_back(
             Vertex(vertices[tgt_id].longitude, vertices[tgt_id].latitude));
-        vertices[next_id].color = edge.color;
+        vertices[next_id].color = (float)edge.color;
         has_next.push_back(false);
         next.push_back(0);
 
@@ -824,7 +859,7 @@ struct Subgraph {
 
       counter += 2;
     }
-    index_offsets.push_back(indices.size());
+    index_offsets.push_back((uint)indices.size());
 
     // Allocate GPU memory and send data
     if (vertices.size() < 1 || indices.size() < 1) return;
@@ -858,19 +893,20 @@ struct Subgraph {
     glBindVertexArray(0);
     glBindBuffer(GL_ARRAY_BUFFER, 0);
 
-    std::cout << "GfxGraph consisting of " << vertices.size()
-              << " vertices and " << indices.size() << " indices" << std::endl;
+    // std::cout<<"GfxGraph consisting of "<<vertices.size()<<" vertices and
+    // "<<indices.size()<<" indices"<<std::endl;
   }
 
   void draw(float scale) {
     // glBindVertexArray(va_handle);
     // glDrawElements(GL_LINES, indices.size(),  GL_UNSIGNED_INT,  0 );
 
+    glBindVertexArray(va_handle);
+
     for (size_t i = 0; i < index_offsets.size() - 1; i++) {
       glLineWidth(std::max(1.0f, line_widths[i] * scale));
       // glLineWidth(line_widths[i]);
 
-      glBindVertexArray(va_handle);
       glDrawElements(GL_LINES, index_offsets[i + 1] - index_offsets[i],
                      GL_UNSIGNED_INT,
                      (void*)(index_offsets[i] * sizeof(GLuint)));
@@ -879,31 +915,122 @@ struct Subgraph {
 };
 
 /**
- * A graph made up from subgraphs. Limited to rendering edges.
+ * A graph made up from subgraphs, that can be arranged on multiple layers.
+ * Limited to rendering edges.
  * This struct primarily holds a set of subgraphs and offers the neccessary
  * functionality to add and change subgraphs.
  */
 struct Graph {
-  std::vector<std::unique_ptr<Subgraph>> subgraphs;
-
+  /**
+   * Add a new subgraph. Defaults to layer 0.
+   * \param nodes Set of nodes of the new subgraph.
+   * \param edges Set of edges of the new subgraph.
+   */
   void addSubgraph(std::vector<Node>& nodes, std::vector<Edge>& edges) {
     std::unique_ptr<Subgraph> subgraph(new Subgraph);
     subgraphs.push_back(std::move(subgraph));
 
     subgraphs.back()->loadGraphData(nodes, edges);
+
+    auto itr =
+        layers.insert(std::pair<uint, std::list<uint>>(0, std::list<uint>()));
+    itr.first->second.push_back(subgraphs.size() - 1);
   }
 
+  /**
+   * Add an existing subgraph. Defaults to layer 0.
+   * \param subrgaph The Subgrgaph to add
+   */
+  void addSubgraph(std::unique_ptr<Subgraph> subgraph) {
+    subgraphs.push_back(std::move(subgraph));
+    auto itr =
+        layers.insert(std::pair<uint, std::list<uint>>(0, std::list<uint>()));
+    itr.first->second.push_back(subgraphs.size() - 1);
+  }
+
+  /**
+   * Add a new subgraph on a given layer. If the layer index doesn't exist, a
+   * new layer is created.
+   * \param nodes Set of nodes of the new subgraph.
+   * \param edges Set of edges of the new subgraph.
+   * \param layer Layer to place the new subgraph on. If layer doesn't exist
+   * yet, it is automatically created.
+   */
+  void addSubgraph(std::vector<Node>& nodes, std::vector<Edge>& edges,
+                   uint layer) {
+    std::unique_ptr<Subgraph> subgraph(new Subgraph);
+    subgraphs.push_back(std::move(subgraph));
+
+    subgraphs.back()->loadGraphData(nodes, edges);
+
+    auto itr = layers.insert(
+        std::pair<uint, std::list<uint>>(layer, std::list<uint>()));
+    itr.first->second.push_back(subgraphs.size() - 1);
+  }
+
+  /**
+   * Get a specific subgraph
+   * \param index Target subgraph index
+   */
+  std::unique_ptr<Subgraph>& getSubgraph(uint index) {
+    return subgraphs[index];
+  }
+
+
+  /**
+   * Set visibily of a given subgraph.
+   * \param index Target subgraph index
+   * \param visibility If set to false, subgraph will not be rendered.
+   */
   void setVisibilty(uint index, bool visibility) {
     if (index < subgraphs.size()) subgraphs[index]->isVisible = visibility;
   }
 
+  /**
+   * Set layer of a given subgraph.
+   * \param index Target subgraph index
+   * \param layer Layer that the subgraph is assigned to.
+   */
+  void setLayer(uint index, uint layer) {
+    // TODO find cleaner solution
+    for (auto& layer : layers)
+      for (auto itr = layer.second.begin(); itr != layer.second.end(); itr++)
+        if (*itr == index) layer.second.erase(itr);
+
+    auto itr = layers.insert(
+        std::pair<uint, std::list<uint>>(layer, std::list<uint>()));
+    itr.first->second.push_back(index);
+  }
+
+  /**
+   * Draw all subgraphs, that are set to visible.
+   * The draw order depends on layers and -within each layer- on edge type.
+   * \param scale Additonal scale factor for edge widths.
+   */
   void draw(float scale) {
-    for (auto& subgraph : subgraphs) {
-      if (subgraph->isVisible) subgraph->draw(scale);
+    for (auto& layer : layers) {
+      for (auto& subgraph_idx : layer.second) {
+        if (subgraphs[subgraph_idx]->isVisible)
+          subgraphs[subgraph_idx]->draw(scale);
+      }
     }
   }
+
+ private:
+  /**
+   * Actual (Linear) storage of all subgraphs.
+   */
+  std::vector<std::unique_ptr<Subgraph>> subgraphs;
+
+  /**
+   * List of subgraphs (given by index) per layer.
+   */
+  std::map<uint, std::list<uint>> layers;
 };
 
+/**
+ * Collection of test labels on the map.
+ */
 struct TextLabels {
   std::array<float, 255> u;
   std::array<float, 255> v;
@@ -918,13 +1045,13 @@ struct TextLabels {
     atlas_rows.push_back("567890&@.,?!'\"");
     atlas_rows.push_back("\"()*ßöäü-_");
 
-    float u_value = 1.0 / 16.0;
-    float v_value = 5.0 / 6.0;
+    float u_value = 1.0f / 16.0f;
+    float v_value = 5.0f / 6.0f;
 
     for (std::string& s : atlas_rows) {
       for (unsigned char c : s) {
         u[c] = u_value;
-        u_value += 1.0 / 16.0;
+        u_value += 1.0f / 16.0f;
         v[c] = v_value;
       }
 
@@ -932,24 +1059,20 @@ struct TextLabels {
       v_value -= 1.0f / 6.0f;
     }
 
-    // Create basic quad mesh for rendering characters
-    std::array<float, 16> vertex_array = {{-0.03, -0.1, 0.0, 0.0, -0.03, 0.1,
-                                           0.0, 1.0, 0.03, 0.1, 1.0, 1.0, 0.03,
-                                           -0.1, 1.0, 0.0}};
-
-    std::array<GLuint, 6> index_array = {{0, 1, 2, 2, 0, 3}};
-
+    // Generate vertex and index buffer array and allocate enough space for
+    // 10000 labels
     glGenVertexArrays(1, &va_handle);
     glGenBuffers(1, &vbo_handle);
     glGenBuffers(1, &ibo_handle);
 
     glBindVertexArray(va_handle);
     glBindBuffer(GL_ARRAY_BUFFER, vbo_handle);
-    glBufferData(GL_ARRAY_BUFFER, sizeof(vertex_array), vertex_array.data(),
-                 GL_STATIC_DRAW);
+    glBufferData(
+        GL_ARRAY_BUFFER, sizeof(GLfloat) * 16 * 10000, NULL,
+        GL_STATIC_DRAW);  // each label uses vertex data worth 16 floats
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ibo_handle);
-    glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(index_array),
-                 index_array.data(), GL_STATIC_DRAW);
+    glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(GLuint) * 6 * 10000, NULL,
+                 GL_STATIC_DRAW);  // each label uses 6 indices
     glBindVertexArray(0);
     glBindBuffer(GL_ARRAY_BUFFER, 0);
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
@@ -1026,6 +1149,9 @@ struct TextLabels {
 
   GLuint font_atlas_handle;
 
+  /** Total number of labels */
+  uint num_labels;
+
   /** Geo-Cooridnates of each label */
   std::vector<float> geoCoordinates;
   /** String of of each label encoded as look-up-texture for font altas */
@@ -1036,37 +1162,70 @@ struct TextLabels {
   std::vector<float> scales;
   /** Visibility of each label i.e. rendered or not */
   std::vector<bool> visibility;
+  /** Index array offset to beginning of label */
+  std::vector<uint> offsets;
 
   void addLabel(std::string label_text, float latitude, float longitude,
                 float scale) {
-    geoCoordinates.push_back(longitude);
-    geoCoordinates.push_back(latitude);
+    if (num_labels < 10000) {
+      num_labels++;
 
-    // convert string to text texture (i.e. character to uv position in texture
-    // atlas)
-    float* data = new float[label_text.length() * 2];
-    for (size_t i = 0; i < label_text.length(); i++) {
-      data[i * 2] = u[(int)label_text[i]];
-      data[i * 2 + 1] = v[(int)label_text[i]];
+      // Create basic quad mesh for rendering characters
+      float x_min = (-0.03f * label_text.length());
+      float x_max = (0.03f * label_text.length());
+      std::array<float, 16> vertex_array = {
+          {x_min, -0.1f, 0.0f, 0.0f, x_min, 0.1f, 0.0f, 1.0f, x_max, 0.1f, 1.0f,
+           1.0f, x_max, -0.1f, 1.0f, 0.0f}};
+      uint offset = num_labels * 4;
+      std::array<GLuint, 6> index_array = {{offset + 0, offset + 1, offset + 2,
+                                            offset + 2, offset + 0,
+                                            offset + 3}};
+
+      glBindVertexArray(va_handle);
+      glBindBuffer(GL_ARRAY_BUFFER, vbo_handle);
+      glBufferSubData(
+          GL_ARRAY_BUFFER, num_labels * sizeof(vertex_array),
+          sizeof(vertex_array),
+          vertex_array.data());  // each label uses vertex data worth 16 floats
+      glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ibo_handle);
+      glBufferSubData(GL_ELEMENT_ARRAY_BUFFER, num_labels * sizeof(index_array),
+                      sizeof(index_array),
+                      index_array.data());  // each label uses 6 indices
+      glBindVertexArray(0);
+      glBindBuffer(GL_ARRAY_BUFFER, 0);
+      glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
+
+      offsets.push_back(num_labels * sizeof(index_array));
+
+      geoCoordinates.push_back(longitude);
+      geoCoordinates.push_back(latitude);
+
+      // convert string to text texture (i.e. character to uv position in
+      // texture atlas)
+      float* data = new float[label_text.length() * 2];
+      for (size_t i = 0; i < label_text.length(); i++) {
+        data[i * 2] = u[(int)label_text[i]];
+        data[i * 2 + 1] = v[(int)label_text[i]];
+      }
+
+      GLuint texture_handle = 0;
+      glGenTextures(1, &texture_handle);
+      // assert(font_atlas_handle > 0);
+      glBindTexture(GL_TEXTURE_2D, texture_handle);
+      glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+      glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+      glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+      glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+      glTexImage2D(GL_TEXTURE_2D, 0, GL_RG32F, label_text.length(), 1, 0, GL_RG,
+                   GL_FLOAT, data);
+      glBindTexture(GL_TEXTURE_2D, 0);
+
+      text_texture_handles.push_back(texture_handle);
+
+      lengths.push_back(label_text.length());
+      scales.push_back(scale);
+      visibility.push_back(true);
     }
-
-    GLuint texture_handle = 0;
-    glGenTextures(1, &texture_handle);
-    // assert(font_atlas_handle > 0);
-    glBindTexture(GL_TEXTURE_2D, texture_handle);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RG32F, label_text.length(), 1, 0, GL_RG,
-                 GL_FLOAT, data);
-    glBindTexture(GL_TEXTURE_2D, 0);
-
-    text_texture_handles.push_back(texture_handle);
-
-    lengths.push_back(label_text.length());
-    scales.push_back(scale);
-    visibility.push_back(true);
   }
 
   void draw(OrbitalCamera& camera) {
@@ -1078,15 +1237,16 @@ struct TextLabels {
     int zero = 0;
     glUniform1iv(glGetUniformLocation(prgm_handle, "fontAtlas_tx2D"), 1, &zero);
 
+    // set label independent uniforms
+    glUniformMatrix4fv(glGetUniformLocation(prgm_handle, "view_matrix"), 1,
+                       GL_FALSE, camera.view_matrix.data.data());
+    glUniformMatrix4fv(glGetUniformLocation(prgm_handle, "projection_matrix"),
+                       1, GL_FALSE, camera.projection_matrix.data.data());
+
+    glBindVertexArray(va_handle);
+
     for (size_t i = 0; i < visibility.size(); i++) {
       if (visibility[i]) {
-        // set uniforms
-        glUniformMatrix4fv(glGetUniformLocation(prgm_handle, "view_matrix"), 1,
-                           GL_FALSE, camera.view_matrix.data.data());
-        glUniformMatrix4fv(
-            glGetUniformLocation(prgm_handle, "projection_matrix"), 1, GL_FALSE,
-            camera.projection_matrix.data.data());
-
         glUniform2fv(glGetUniformLocation(prgm_handle, "label_geoCoords"), 1,
                      &geoCoordinates[i * 2]);
         float charCount = (float)lengths[i];
@@ -1102,11 +1262,186 @@ struct TextLabels {
         glUniform1iv(glGetUniformLocation(prgm_handle, "label_text_tx2D"), 1,
                      &one);
 
-        glBindVertexArray(va_handle);
-        glDrawElementsInstanced(GL_TRIANGLES, 6, GL_UNSIGNED_INT, (void*)NULL,
-                                lengths[i]);
+        glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, (void*)&offsets[i]);
       }
     }
+  }
+};
+
+/**
+ * Collection of polygons on the map.
+ */
+struct Polygons {
+  Polygons() {
+    // Load polygon shader program
+    prgm_handle = createShaderProgram("../src/polygon_v.glsl",
+                                      "../src/polygon_f.glsl", {"v_position"});
+
+    index_offsets.push_back(0);
+  }
+
+  Polygons(const Polygons& cpy) = delete;
+
+  /**
+   * Adds a new polygon on the map froma set of nodes defining the boundary of
+   * the polygon.
+   * Nodes have to be given in counter-clockwise order! Furthermore, the polygon
+   * musn't cross the +180°/-180° longitude border.
+   * \param poly_border A set of nodes in geo coordinates defining the polygon
+   * boundary (counter-clockwise order required).
+   */
+  void addPolygon(std::vector<Node> poly_border) {
+    std::vector<Math::Vec2> triangulation_vertices;
+    std::vector<uint> triangulation_indices;
+
+    for (auto& node : poly_border) {
+      vertices.push_back(node.lon);
+      vertices.push_back(node.lat);
+      triangulation_vertices.push_back(Math::Vec2(node.lon, node.lat));
+    }
+
+    triangulation_indices = computeTriangulation(triangulation_vertices);
+
+    for (auto& index : triangulation_indices) {
+      indices.push_back(index);
+    }
+
+    index_offsets.push_back(triangulation_indices.size() +
+                            index_offsets.back());
+
+    if (vertices.size() < 1 || indices.size() < 1) return;
+
+    auto va_size = sizeof(float) * 2 * vertices.size();
+    auto vi_size = sizeof(uint) * indices.size();
+
+    if (va_handle == 0 || vbo_handle == 0 || ibo_handle == 0) {
+      glGenVertexArrays(1, &va_handle);
+      glGenBuffers(1, &vbo_handle);
+      glGenBuffers(1, &ibo_handle);
+    }
+
+    glBindVertexArray(va_handle);
+    glBindBuffer(GL_ARRAY_BUFFER, vbo_handle);
+    glBufferData(GL_ARRAY_BUFFER, va_size, vertices.data(), GL_STATIC_DRAW);
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ibo_handle);
+    glBufferData(GL_ELEMENT_ARRAY_BUFFER, vi_size, indices.data(),
+                 GL_STATIC_DRAW);
+    glBindVertexArray(0);
+    glBindBuffer(GL_ARRAY_BUFFER, 0);
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
+
+    glBindVertexArray(va_handle);
+    glBindBuffer(GL_ARRAY_BUFFER, vbo_handle);
+    glEnableVertexAttribArray(0);
+    glVertexAttribPointer(0, 2, GL_FLOAT, false, sizeof(GL_FLOAT) * 2, 0);
+    glBindVertexArray(0);
+    glBindBuffer(GL_ARRAY_BUFFER, 0);
+  }
+
+  /**
+   * Draw all polygons.
+   */
+  void draw(OrbitalCamera& camera) {
+    glUseProgram(prgm_handle);
+
+    // set label independent uniforms
+    glUniformMatrix4fv(glGetUniformLocation(prgm_handle, "view_matrix"), 1,
+                       GL_FALSE, camera.view_matrix.data.data());
+    glUniformMatrix4fv(glGetUniformLocation(prgm_handle, "projection_matrix"),
+                       1, GL_FALSE, camera.projection_matrix.data.data());
+
+    glBindVertexArray(va_handle);
+
+    for (size_t i = 0; i < index_offsets.size() - 1; i++) {
+      glPointSize(10.0);
+      glDrawElements(GL_TRIANGLES, index_offsets[i + 1] - index_offsets[i],
+                     GL_UNSIGNED_INT,
+                     (void*)(index_offsets[i] * sizeof(GLuint)));
+    }
+  }
+
+ private:
+  // Vertices for all polygons
+  std::vector<float> vertices;
+
+  // Indices for alle polygons
+  std::vector<uint> indices;
+
+  std::vector<uint> index_offsets;
+
+  GLuint va_handle;
+
+  GLuint vbo_handle;
+
+  GLuint ibo_handle;
+
+  GLuint prgm_handle;
+
+  static bool PointsOnSameLineSide(Math::Vec2 p1, Math::Vec2 p2, Math::Vec2 a,
+                                   Math::Vec2 b) {
+    Math::Mat2x2 lrot({0.0f, 1.0f, -1.0f, 0.0f});
+    double ab1 = Math::dot(lrot * (b - a), p1 - a);
+    double ab2 = Math::dot(lrot * (b - a), p2 - a);
+    return ab1 * ab2 >= 0.0;
+  }
+  static bool vec2InTriangle(Math::Vec2 v, Math::Vec2 pre, Math::Vec2 cur,
+                             Math::Vec2 nex) {
+    return PointsOnSameLineSide(v, pre, cur, nex) &&
+           PointsOnSameLineSide(v, cur, nex, pre) &&
+           PointsOnSameLineSide(v, nex, pre, cur);
+  }
+  static bool vec2LeftOfLine(Math::Vec2 v, Math::Vec2 a, Math::Vec2 b) {
+    Math::Mat2x2 lrot({0, 1, -1, 0});
+    return Math::dot(lrot * (b - a), v - a) > 0.0;
+  }
+  std::vector<uint> computeTriangulation(
+      std::vector<Math::Vec2>& polyvertices) {
+    if (polyvertices.size() < 3)
+      throw(std::runtime_error(std::string(
+          "can not triangulate polygon with less than 3 vertices")));
+
+    std::vector<uint> triangles;
+    std::list<Math::Vec3> vertices;
+    for (uint i = 0; i < polyvertices.size(); i++)
+      vertices.push_back(
+          Math::Vec3(polyvertices[i].x, polyvertices[i].y, float(i)));
+
+    while (vertices.size() >= 3) {
+      Math::Vec3 pre = vertices.front();
+      Math::Vec2 pre2(pre.x, pre.y);
+      vertices.pop_front();
+      Math::Vec3 cur = vertices.front();
+      Math::Vec2 cur2(cur.x, cur.y);
+      vertices.pop_front();
+      Math::Vec3 nex = vertices.front();
+      Math::Vec2 nex2(nex.x, nex.y);
+      vertices.pop_front();
+      /* check if triangle is an ear */
+      if (vec2LeftOfLine(nex2, pre2, cur2)) {
+        /* check if triangle pre->cur->nex->pre can be cut */
+        bool vint = false;
+        for (auto& v : vertices)
+          if (vec2InTriangle(Math::Vec2(v.x, v.y), pre2, cur2, nex2))
+            vint = true;
+        if (vint) {
+          /* there is a vertex in the triangle, move to next triangle */
+          vertices.push_back(pre);
+          vertices.push_front(nex);
+          vertices.push_front(cur);
+        } else { /* no vertex in triangle */
+          vertices.push_front(nex);
+          vertices.push_front(pre);
+          triangles.push_back(uint(pre.z));
+          triangles.push_back(uint(cur.z));
+          triangles.push_back(uint(nex.z));
+        }
+      } else {
+        vertices.push_back(pre);
+        vertices.push_front(nex);
+        vertices.push_front(cur);
+      }
+    }
+    return triangles;
   }
 };
 
@@ -1253,9 +1588,9 @@ void mouseScrollFeedback(GLFWwindow* window, double x_offset, double y_offset) {
       reinterpret_cast<OrbitalCamera*>(glfwGetWindowUserPointer(window));
 
   float camera_height_inertia =
-      std::pow((active_camera->orbit - 1.0f) * 0.1f, 1.0);
+      std::pow((active_camera->orbit - 1.0f) * 0.1f, 1.0f);
 
-  active_camera->moveInOrbit(0.0, 0.0,
+  active_camera->moveInOrbit(0.0f, 0.0f,
                              -camera_height_inertia * (float)y_offset);
 }
 
@@ -1276,7 +1611,7 @@ void updateOrbitalCamera(GLFWwindow* window) {
     // camera_lat -= cursor_movement.y;
 
     GLfloat camera_vertical_inertia =
-        std::pow((active_camera->orbit - 1.0) * 0.1, 1.2f);
+        std::pow((active_camera->orbit - 1.0f) * 0.1f, 1.2f);
 
     active_camera->moveInOrbit(-cursor_movement[1] * camera_vertical_inertia,
                                cursor_movement[0] * camera_vertical_inertia,
@@ -1463,7 +1798,7 @@ int main(int argc, char* argv[]) {
    * the GPU (or GPU driver) owns.
    *
    * Instances of structs holding OpenGL handles are created within an
-   *additional
+   * additional
    * scope, so that they are destroyed while the OpenGL context is still alive
    */
   {
@@ -1478,11 +1813,15 @@ int main(int argc, char* argv[]) {
 
     /* Create renderable graph (mesh) */
     Graph lineGraph;
+
+    /* Create polygons */
+    Polygons polys;
+
     Core core(core_future.get());
     lineGraph.addSubgraph(core.draw.nodes, core.draw.edges);
     std::unique_ptr<Subgraph> subgraph(new Subgraph);
     subgraph->isVisible = false;
-    lineGraph.subgraphs.push_back(std::move(subgraph));
+    lineGraph.addSubgraph(std::move(subgraph));
 
     /* Create a orbital camera */
     OrbitalCamera camera;
@@ -1498,18 +1837,19 @@ int main(int argc, char* argv[]) {
     glfwSetWindowUserPointer(window, &camera);
 
     /* Create text labels */
-    // TextLabels labels;
+    TextLabels labels;
 
     // TODO FIND BUG: camera matrices have to be updated after label object
     // creation....
     camera.updateViewMatrix();
     camera.updateProjectionMatrix();
 
-    // for(int lon=-180; lon<=180 ; lon++)
-    //	labels.addLabel(std::to_string(lon),0.0,lon,0.25);
+    for (int lon = -180; lon <= 180; lon++)
+      labels.addLabel(std::to_string(lon), 0.0, (float)lon, 0.25);
 
-    // for(int lat=-90; lat<=90 ; lat++)
-    //	labels.addLabel(std::to_string(lat),lat,0.0,0.25);
+    for (int lat = -90; lat <= 90; lat++)
+      labels.addLabel(std::to_string(lat), (float)lat, 0.0, 0.25);
+
     /* Create the debug sphere */
     DebugSphere db_sphere;
     db_sphere.create();
@@ -1540,6 +1880,7 @@ int main(int argc, char* argv[]) {
       glfwGetFramebufferSize(window, &width, &height);
       glViewport(0, 0, width, height);
 
+      /* Draw debug sphere */
       glUseProgram(debug_prgm_handle);
 
       glUniformMatrix4fv(glGetUniformLocation(debug_prgm_handle, "view_matrix"),
@@ -1551,6 +1892,10 @@ int main(int argc, char* argv[]) {
       glPointSize(2.0);
       db_sphere.draw();
 
+      /* Draw polygons */
+      polys.draw(camera);
+
+      /* Draw edges (i.e. streets) */
       glUseProgram(shader_prgm_handle);
 
       glUniformMatrix4fv(
@@ -1560,9 +1905,10 @@ int main(int argc, char* argv[]) {
           glGetUniformLocation(shader_prgm_handle, "projection_matrix"), 1,
           GL_FALSE, camera.projection_matrix.data.data());
 
-      float scale = std::min((0.0025 / (camera.orbit - 1.0f)), 2.0);
+      float scale = std::min((0.0025f / (camera.orbit - 1.0f)), 2.0f);
 
       BoundingBox bbox = camera.computeVisibleArea();
+      std::cout << "bbox: " << bbox.min_longitude << ", " << bbox.min_latitude << "," << bbox.max_longitude << ", " << bbox.max_latitude << std::endl;
       auto render_setup_end = std::chrono::steady_clock::now();
 
       bool new_bundle = false;
@@ -1572,8 +1918,8 @@ int main(int argc, char* argv[]) {
         if(status == std::future_status::ready){
           auto graph_load_start = std::chrono::steady_clock::now();
           bundle = bundle_future.get();
-          lineGraph.subgraphs[1]->loadGraphData(bundle.nodes, bundle.edges);
-          lineGraph.subgraphs[1]->isVisible = true;
+          lineGraph.getSubgraph(1)->loadGraphData(bundle.nodes, bundle.edges);
+          lineGraph.getSubgraph(1)->isVisible = true;
           auto graph_load_end = std::chrono::steady_clock::now();
           graph_load_time = graph_load_end - graph_load_start;
           Params::curr_level_hint = bundle.level;
@@ -1591,7 +1937,8 @@ int main(int argc, char* argv[]) {
       lineGraph.draw(scale);
       auto render_graph_end = std::chrono::steady_clock::now();
 
-      // labels.draw(camera);
+      /* Draw labels */
+      labels.draw(camera);
 
       // std::cout << std::fixed;
       // std::cout << std::setprecision(20);
