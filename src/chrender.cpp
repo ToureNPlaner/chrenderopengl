@@ -1163,7 +1163,7 @@ struct TextLabels {
   /** Visibility of each label i.e. rendered or not */
   std::vector<bool> visibility;
   /** Index array offset to beginning of label */
-  std::vector<uint> offsets;
+  std::vector<ptrdiff_t> offsets;
 
   void addLabel(std::string label_text, float latitude, float longitude,
                 float scale) {
@@ -1262,7 +1262,7 @@ struct TextLabels {
         glUniform1iv(glGetUniformLocation(prgm_handle, "label_text_tx2D"), 1,
                      &one);
 
-        glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, (void*)&offsets[i]);
+        glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, (void*)offsets[i]);
       }
     }
   }
