@@ -25,13 +25,15 @@ double euclidian_distance(const Node& from, const Node& to);
  * Edge struct for parsing preprocessed osm graph from file
  */
 struct Edge {
-  Edge() : source(0), target(0), width(0), color(0) {}
-  Edge(uint s, uint t, uint w, uint c)
-      : source(s), target(t), width(w), color(c) {}
+  Edge() : source(0), target(0), width(0), skip_a(0), skip_b(0), color(0) {}
+  Edge(uint src, uint trgt, uint w, int sa, int sb, uint c)
+      : source(src), target(trgt), width(w), skip_a(sa), skip_b(sb), color(c) {}
 
   uint source;
   uint target;
   uint width;
+  int skip_a;
+  int skip_b;
   int color;
 };
 

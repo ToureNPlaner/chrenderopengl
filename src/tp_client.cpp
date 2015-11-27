@@ -92,7 +92,9 @@ Core TPClient::request_core(uint node_count, int min_length, int max_length,
     uint src = *it++;
     uint trgt = *it++;
     uint type = *it++;
-    draw.edges.emplace_back(Edge(src, trgt, type/2, type));
+    int skip_a = *it++;
+    int skip_b = *it++;
+    draw.edges.emplace_back(Edge(src, trgt, type/2, skip_a, skip_b, type));
   }
 
   return Core(std::move(draw));
@@ -148,7 +150,9 @@ Draw TPClient::request_bundle(const BoundingBox& bbox, uint core_size, int min_p
     uint src = *it++;
     uint trgt = *it++;
     uint type = *it++;
-    draw.edges.emplace_back(Edge(src, trgt, type/2, type));
+    int skip_a = *it++;
+    int skip_b = *it++;
+    draw.edges.emplace_back(Edge(src, trgt, type/2, skip_a, skip_b, type));
   }
 
 

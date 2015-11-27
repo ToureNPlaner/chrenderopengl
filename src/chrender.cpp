@@ -801,6 +801,11 @@ struct Subgraph {
     for (auto& edge : edges) {
       uint src_id = edge.source;
       uint tgt_id = edge.target;
+      int skip_a = edge.skip_a;
+      // Ignore hierarchy edges
+      if(skip_a != -1) {
+        continue;
+      }
 
       while (has_next[src_id] && (vertices[src_id].color != edge.color)) {
         src_id = next[src_id];
@@ -904,7 +909,7 @@ struct Subgraph {
     glBindVertexArray(va_handle);
 
     for (size_t i = 0; i < index_offsets.size() - 1; i++) {
-      glLineWidth(std::max(1.0f, line_widths[i] * scale));
+      glLineWidth(std::max(1.0f, /*line_widths[i]*/1.0f * scale));
       // glLineWidth(line_widths[i]);
 
       glDrawElements(GL_LINES, index_offsets[i + 1] - index_offsets[i],
