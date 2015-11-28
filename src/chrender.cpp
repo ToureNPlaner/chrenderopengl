@@ -773,7 +773,7 @@ struct Subgraph {
 
   void loadGraphData(std::vector<Node>& nodes, std::vector<Edge>& edges) {
     index_offsets.clear();
-    index_offsets.push_back(0);
+    //index_offsets.push_back(0);
     line_widths.clear();
 
     std::vector<Vertex> vertices;
@@ -801,6 +801,11 @@ struct Subgraph {
     for (auto& edge : edges) {
       uint src_id = edge.source;
       uint tgt_id = edge.target;
+      // Ignroe hiearchy edges
+      int skip_a = edge.skip_a;
+      if(skip_a != -1) {
+        continue;
+      }
 
       while (has_next[src_id] && (vertices[src_id].color != edge.color)) {
         src_id = next[src_id];
