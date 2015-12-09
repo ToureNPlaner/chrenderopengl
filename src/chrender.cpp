@@ -698,7 +698,8 @@ struct OrbitalCamera {
         right_intersection_lon = -180.0f - right_intersection_lon;
     }
 
-    bbox.min_longitude = longitude - std::abs(right_intersection_lon - longitude);
+    bbox.min_longitude =
+        longitude - std::abs(right_intersection_lon - longitude);
     bbox.min_longitude = (bbox.min_longitude < -180.0f)
                              ? 360.0f + bbox.min_longitude
                              : bbox.min_longitude;
@@ -773,7 +774,7 @@ struct Subgraph {
 
   void loadGraphData(std::vector<Node>& nodes, std::vector<Edge>& edges) {
     index_offsets.clear();
-    //index_offsets.push_back(0);
+    // index_offsets.push_back(0);
     line_widths.clear();
 
     std::vector<Vertex> vertices;
@@ -803,7 +804,7 @@ struct Subgraph {
       uint tgt_id = edge.target;
       // Ignroe hiearchy edges
       int skip_a = edge.skip_a;
-      if(skip_a != -1) {
+      if (skip_a != -1) {
         continue;
       }
 
@@ -980,7 +981,6 @@ struct Graph {
   std::unique_ptr<Subgraph>& getSubgraph(uint index) {
     return subgraphs[index];
   }
-
 
   /**
    * Set visibily of a given subgraph.
@@ -1548,13 +1548,13 @@ void windowSizeCallback(GLFWwindow* window, int width, int height) {
 }
 
 namespace Params {
-  bool MEASSURE = false;
-  bool LEVEL_SEQUENCE = false;
-  TPClient::LevelMode mode = TPClient::LevelMode::AUTO;
+bool MEASSURE = false;
+bool LEVEL_SEQUENCE = false;
+TPClient::LevelMode mode = TPClient::LevelMode::AUTO;
 
-  uint curr_level_hint = 40;
-  double min_length_factor = 0.005;
-  double max_length_factor = 0.02;
+uint curr_level_hint = 40;
+double min_length_factor = 0.005;
+double max_length_factor = 0.02;
 }
 
 namespace Controls {
@@ -1563,9 +1563,9 @@ namespace {
 std::array<float, 2> latest_cursor_position = {{0.0, 0.0}};
 }
 
-
-void keyCallback(GLFWwindow* window, int key, int scancode, int action, int mods) {
-  if(key == GLFW_KEY_M && action == GLFW_PRESS) {
+void keyCallback(GLFWwindow* window, int key, int scancode, int action,
+                 int mods) {
+  if (key == GLFW_KEY_M && action == GLFW_PRESS) {
     Params::MEASSURE = true;
   } else if (key == GLFW_KEY_L && action == GLFW_PRESS) {
     Params::LEVEL_SEQUENCE = true;
@@ -1574,18 +1574,20 @@ void keyCallback(GLFWwindow* window, int key, int scancode, int action, int mods
   } else if (key == GLFW_KEY_DOWN && action == GLFW_PRESS) {
     Params::curr_level_hint++;
     Params::mode = TPClient::LevelMode::EXACT;
-    std::cout << "increasing level, now " << Params::curr_level_hint << std::endl;
+    std::cout << "increasing level, now " << Params::curr_level_hint
+              << std::endl;
   } else if (key == GLFW_KEY_UP && action == GLFW_PRESS) {
     Params::curr_level_hint--;
     Params::mode = TPClient::LevelMode::EXACT;
-    std::cout << "decreasing level, now " << Params::curr_level_hint << std::endl;
+    std::cout << "decreasing level, now " << Params::curr_level_hint
+              << std::endl;
   } else if (key == GLFW_KEY_PAGE_UP && action == GLFW_PRESS) {
     Params::min_length_factor /= 1.1;
     Params::min_length_factor /= 1.1;
   } else if (key == GLFW_KEY_PAGE_DOWN && action == GLFW_PRESS) {
     Params::min_length_factor *= 1.1;
     Params::min_length_factor *= 1.1;
-  } 
+  }
 }
 
 void mouseScrollFeedback(GLFWwindow* window, double x_offset, double y_offset) {
@@ -1745,7 +1747,9 @@ int main(int argc, char* argv[]) {
 
   TPClient tpclient(server_url);
   const uint core_size = 1000;
-  std::future<Core> core_future = std::async(std::launch::async, &TPClient::request_core, &tpclient, core_size, 5, 400, 0.01);
+  std::future<Core> core_future =
+      std::async(std::launch::async, &TPClient::request_core, &tpclient,
+                 core_size, 5, 400, 0.01);
 
   /////////////////////////////////////
   // Window and OpenGL Context creation
@@ -1791,7 +1795,6 @@ int main(int argc, char* argv[]) {
   glfwSetKeyCallback(window, Controls::keyCallback);
   /* Hide cursor */
   // glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_HIDDEN);
-
 
   /////////////////////////////////////////////////////////////////////
   // Creation of graphics resources, i.e. shader programs, meshes, etc.
@@ -1913,14 +1916,17 @@ int main(int argc, char* argv[]) {
       float scale = std::min((0.0025f / (camera.orbit - 1.0f)), 2.0f);
 
       BoundingBox bbox = camera.computeVisibleArea();
-      std::cout << "bbox: " << bbox.min_longitude << ", " << bbox.min_latitude << "," << bbox.max_longitude << ", " << bbox.max_latitude << std::endl;
+      std::cout << "bbox: " << bbox.min_longitude << ", " << bbox.min_latitude
+                << "," << bbox.max_longitude << ", " << bbox.max_latitude
+                << std::endl;
       auto render_setup_end = std::chrono::steady_clock::now();
 
       bool new_bundle = false;
-      if(bundle_future.valid()){
-        std::future_status status = bundle_future.wait_for(std::chrono::milliseconds(5));
+      if (bundle_future.valid()) {
+        std::future_status status =
+            bundle_future.wait_for(std::chrono::milliseconds(5));
 
-        if(status == std::future_status::ready){
+        if (status == std::future_status::ready) {
           auto graph_load_start = std::chrono::steady_clock::now();
           bundle = bundle_future.get();
           lineGraph.getSubgraph(1)->loadGraphData(bundle.nodes, bundle.edges);
@@ -1930,12 +1936,19 @@ int main(int argc, char* argv[]) {
           Params::curr_level_hint = bundle.level;
           new_bundle = true;
         }
-      } else if (bbox != old || Params::curr_level_hint != bundle.level || Params::LEVEL_SEQUENCE) {
-        double bbox_diagonal = euclidian_distance({bbox.min_latitude, bbox.min_longitude}, {bbox.max_latitude, bbox.max_longitude});
+      } else if (bbox != old || Params::curr_level_hint != bundle.level ||
+                 Params::LEVEL_SEQUENCE) {
+        double bbox_diagonal =
+            euclidian_distance({bbox.min_latitude, bbox.min_longitude},
+                               {bbox.max_latitude, bbox.max_longitude});
         if (Params::LEVEL_SEQUENCE) {
           Params::curr_level_hint = (Params::curr_level_hint + 1) % 400;
         }
-        bundle_future = std::async(std::launch::async, &TPClient::request_bundle, &tpclient, bbox, core_size, Params::curr_level_hint, bbox_diagonal*Params::min_length_factor, bbox_diagonal*Params::max_length_factor, 0.006, Params::mode);
+        bundle_future = std::async(
+            std::launch::async, &TPClient::request_bundle, &tpclient, bbox,
+            core_size, Params::curr_level_hint,
+            bbox_diagonal * Params::min_length_factor,
+            bbox_diagonal * Params::max_length_factor, 0.006, Params::mode);
         old = bbox;
       }
       auto render_graph_start = std::chrono::steady_clock::now();
@@ -1954,18 +1967,19 @@ int main(int argc, char* argv[]) {
       // std::cout<<"camera lon: "<<camera.longitude<<"
       // "<<camera.latitude<<std::endl;
       if (Params::MEASSURE && new_bundle) {
-        milliseconds render_setup_time = render_setup_end-render_setup_start;
-        milliseconds render_graph_time = render_graph_end-render_graph_start;
-        std::cout << "GLDRAWDATA[Core Size, Lines, Level, Render Setup Time (ms), Draw Graph Time (ms), Graph Load Time (ms), Overall Render Time (ms)]:" 
-          << core_size << ','
-          << bundle.edges.size() << ',' 
-          << bundle.level << ','
-          << render_setup_time.count() << ',' 
-          << render_graph_time.count() << ','
-          << graph_load_time.count() << ','
-          << (render_setup_time + render_graph_time + graph_load_time).count()<< std::endl;
+        milliseconds render_setup_time = render_setup_end - render_setup_start;
+        milliseconds render_graph_time = render_graph_end - render_graph_start;
+        std::cout << "GLDRAWDATA[Core Size, Lines, Level, Render Setup Time "
+                     "(ms), Draw Graph Time (ms), Graph Load Time (ms), "
+                     "Overall Render Time (ms)]:"
+                  << core_size << ',' << bundle.edges.size() << ','
+                  << bundle.level << ',' << render_setup_time.count() << ','
+                  << render_graph_time.count() << ',' << graph_load_time.count()
+                  << ','
+                  << (render_setup_time + render_graph_time + graph_load_time)
+                         .count()
+                  << std::endl;
       }
-
 
       /* Swap front and back buffers */
       glfwSwapBuffers(window);

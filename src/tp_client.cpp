@@ -62,12 +62,12 @@ json TPClient::post(const std::string& resource, const json& body) {
     }
     double content_length;
     curl_easy_getinfo(curl, CURLINFO_CONTENT_LENGTH_DOWNLOAD, &content_length);
-    std::cout << "Request Size: " << content_length / (double(2<<20)) << " MiB" << std::endl;
+    std::cout << "Request Size: " << content_length / (double(2 << 20))
+              << " MiB" << std::endl;
   }
   // No copy here since RVO or move
   return json::parse(std::move(read_buffer));
 }
-
 
 Core TPClient::request_core(uint node_count, int min_length, int max_length,
                             double max_ratio) {
@@ -76,7 +76,7 @@ Core TPClient::request_core(uint node_count, int min_length, int max_length,
                {"maxLen", max_length},
                {"maxRatio", max_ratio},
                {"coords", "latlon"}};
-  json res =  post("/algdrawcore", body);
+  json res = post("/algdrawcore", body);
   Draw draw;
   draw.level = 0;
   auto vertices = res["draw"]["vertices"];
@@ -94,68 +94,66 @@ Core TPClient::request_core(uint node_count, int min_length, int max_length,
     uint type = *it++;
     int skip_a = *it++;
     int skip_b = *it++;
-    draw.edges.emplace_back(Edge(src, trgt, type/2, skip_a, skip_b, type));
+    draw.edges.emplace_back(Edge(src, trgt, type / 2, skip_a, skip_b, type));
   }
 
   return Core(std::move(draw));
 }
 
-Draw TPClient::request_bundle(const BoundingBox& bbox, uint core_size, int min_prio, int min_length, int max_length, double max_ratio, LevelMode mode) {
+Draw TPClient::request_bundle(const BoundingBox& bbox, uint core_size,
+                              int min_prio, int min_length, int max_length,
+                              double max_ratio, LevelMode mode) {
   const long multiplier = 10000000;
   const int node_count_hint = 600;
-  const int lat_min = bbox.min_latitude*multiplier;
-  const int lon_min = bbox.min_longitude*multiplier;
-  const int lat_max = bbox.max_latitude*multiplier;
-  const int lon_max = bbox.max_longitude*multiplier;
-  const int width = lon_max-lon_min;
-  const int height = lat_max-lat_min;
-  //lat 478632064lon 82457144width 9277472height 24863696
-  //std::cout << "lat " << lat_min << " lon " << lon_min << " width " << width << " height " << height <<std::endl;
-  json body = {
-    {"bbox", 
-      {
-        /*{"x", lat_min-width},
-        {"y", lon_min-width},
-        {"width", width*3},
-        {"height", height*3},*/
-        {"x", lon_min},
-        {"y", lat_min},
-        {"width", width},
-        {"height", height},
-      }
-    },
+  const int lat_min = bbox.min_latitude * multiplier;
+  const int lon_min = bbox.min_longitude * multiplier;
+  const int lat_max = bbox.max_latitude * multiplier;
+  const int lon_max = bbox.max_longitude * multiplier;
+  const int width = lon_max - lon_min;
+  const int height = lat_max - lat_min;
+  // lat 478632064lon 82457144width 9277472height 24863696
+  // std::cout << "lat " << lat_min << " lon " << lon_min << " width " << width
+  // << " height " << height <<std::endl;
+  json body = {{"bbox",
+                {
+                    /*{"x", lat_min-width},
+                    {"y", lon_min-width},
+                    {"width", width*3},
+                    {"height", height*3},*/
+                    {"x", lon_min},
+                    {"y", lat_min},
+                    {"width", width},
+                    {"height", height},
+                }},
 
-    {"minPrio", min_prio},
-    {"nodeCountHint", node_count_hint},
-    {"coreSize", core_size},
-    {"mode", level_mode(mode)},
-    {"minLen", min_length},
-    {"maxLen", max_length},
-    {"maxRatio", max_ratio},
-    {"coords", "latlon"}
-  };
+               {"minPrio", min_prio},
+               {"nodeCountHint", node_count_hint},
+               {"coreSize", core_size},
+               {"mode", level_mode(mode)},
+               {"minLen", min_length},
+               {"maxLen", max_length},
+               {"maxRatio", max_ratio},
+               {"coords", "latlon"}};
   json res = post("/algbbbundle", body);
   Draw draw;
   draw.level = res["head"]["level"];
   auto vertices = res["draw"]["vertices"];
   const double divider = 10000000;
-  for(auto it = vertices.begin(); it != vertices.end();){
-    double lat = (double) *it++/divider;
-    double lon = (double) *it++/divider;
+  for (auto it = vertices.begin(); it != vertices.end();) {
+    double lat = (double)*it++ / divider;
+    double lon = (double)*it++ / divider;
     draw.nodes.emplace_back(Node(lat, lon));
   }
 
   auto draw_edges = res["draw"]["lines"];
-  for(auto it = draw_edges.begin(); it != draw_edges.end();){
+  for (auto it = draw_edges.begin(); it != draw_edges.end();) {
     uint src = *it++;
     uint trgt = *it++;
     uint type = *it++;
     int skip_a = *it++;
     int skip_b = *it++;
-    draw.edges.emplace_back(Edge(src, trgt, type/2, skip_a, skip_b, type));
+    draw.edges.emplace_back(Edge(src, trgt, type / 2, skip_a, skip_b, type));
   }
-
 
   return draw;
 }
-
